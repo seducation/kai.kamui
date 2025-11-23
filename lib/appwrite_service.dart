@@ -1,4 +1,5 @@
 
+import 'dart:io' as io;
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart';
 import 'poster_item.dart';
@@ -10,7 +11,7 @@ class AppwriteService {
 
   AppwriteService() {
     _client
-        .setEndpoint("https://cloud.appwrite.io/v1")
+        .setEndpoint("https://sgp.cloud.appwrite.io/v1")
         .setProject("691948bf001eb3eccd77");
 
     _db = Databases(_client);
@@ -40,4 +41,12 @@ class AppwriteService {
     }).toList();
   }
 
+  Future<File> uploadFile(io.File file) async {
+    final result = await _storage.createFile(
+      bucketId: "lens-s",
+      fileId: ID.unique(),
+      file: InputFile.fromPath(path: file.path),
+    );
+    return result;
+  }
 }

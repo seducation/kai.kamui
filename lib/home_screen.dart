@@ -236,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   onAddTab: _onAddTab,
                 );
               } else if (name == 'chats') {
-                return const ChatsScreen();
+                return ChatsScreen();
               } else if (name == 'shorts') {
                 return const HMVShortsTabscreen();
               } else if (name == 'feature') {

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -18,31 +19,26 @@ class PsvHomeTabscreen extends StatelessWidget {
             Stack(
               alignment: Alignment.bottomRight,
               children: [
-                Image.network(
-                  'https://i.ytimg.com/vi/I2j2-DqrMgM/maxresdefault.jpg',
+                CachedNetworkImage(
+                  imageUrl: 'https://i.ytimg.com/vi/I2j2-DqrMgM/maxresdefault.jpg',
                   height: 220,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
-                      child: Container(
-                        height: 220,
-                        width: double.infinity,
-                        color: Colors.white,
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
+                  placeholder: (context, url) => Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
                       height: 220,
                       width: double.infinity,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.error, color: Colors.black),
-                    );
-                  },
+                      color: Colors.white,
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    height: 220,
+                    width: double.infinity,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.error, color: Colors.black),
+                  ),
                 ),
                 Container(
                   margin: const EdgeInsets.all(8),
@@ -66,24 +62,19 @@ class PsvHomeTabscreen extends StatelessWidget {
                     radius: 18,
                     backgroundColor: Colors.white,
                     child: ClipOval(
-                      child: Image.network(
-                        'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Callofdutyblackops4.png/220px-Callofdutyblackops4.png',
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Shimmer.fromColors(
-                            baseColor: Colors.grey[300]!,
-                            highlightColor: Colors.grey[100]!,
-                            child: Container(
-                              color: Colors.white,
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.error, color: Colors.black),
-                          );
-                        },
+                      child: CachedNetworkImage(
+                        imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Callofdutyblackops4.png/220px-Callofdutyblackops4.png',
+                        placeholder: (context, url) => Shimmer.fromColors(
+                          baseColor: Colors.grey[300]!,
+                          highlightColor: Colors.grey[100]!,
+                          child: Container(
+                            color: Colors.white,
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.error, color: Colors.black),
+                        ),
                       ),
                     ),
                   ),

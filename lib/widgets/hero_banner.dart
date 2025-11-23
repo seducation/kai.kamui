@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
@@ -36,7 +37,7 @@ class _HeroBannerState extends State<HeroBanner> {
             child: SmoothPageIndicator(
               controller: _controller,
               count: widget.items.length,
-              effect: const WormEffect(
+              effect: WormEffect(
                 dotHeight: 8,
                 dotWidth: 8,
                 activeDotColor: Colors.white,
@@ -75,39 +76,34 @@ class _HeroBannerItem extends StatelessWidget {
       children: [
         // Background Image
         Positioned.fill(
-          child: Image.network(
-            item.imageUrl,
+          child: CachedNetworkImage(
+            imageUrl: item.imageUrl,
             fit: BoxFit.cover,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Shimmer.fromColors(
-                baseColor: Colors.grey[800]!,
-                highlightColor: Colors.grey[700]!,
-                child: Container(
-                  color: Colors.black,
-                ),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                color: Colors.grey[800],
-                child: const Icon(Icons.error, color: Colors.white),
-              );
-            },
+            placeholder: (context, url) => Shimmer.fromColors(
+              baseColor: Colors.grey[800]!,
+              highlightColor: Colors.grey[700]!,
+              child: Container(
+                color: Colors.black,
+              ),
+            ),
+            errorWidget: (context, url, error) => Container(
+              color: Colors.grey[800],
+              child: const Icon(Icons.error, color: Colors.white),
+            ),
           ),
         ),
 
         // Gradient Overlay (bottom fade)
         Positioned.fill(
           child: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Color.fromRGBO(0, 0, 0, 0.6),
-                  Color.fromRGBO(0, 0, 0, 0.8),
+                  const Color.fromRGBO(0, 0, 0, 0.6),
+                  const Color.fromRGBO(0, 0, 0, 0.8),
                 ],
               ),
             ),

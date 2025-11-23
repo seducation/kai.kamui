@@ -1,13 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' hide Row;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
-
-import 'webview_screen.dart';
+import 'package:my_app/webview_screen.dart';
 
 class LensScreen extends StatefulWidget {
   const LensScreen({super.key});
@@ -21,7 +19,7 @@ class _LensScreenState extends State<LensScreen> {
   final String appwriteEndpoint = 'https://sgp.cloud.appwrite.io/v1';
   final String appwriteProjectId = '691948bf001eb3eccd77';
   final String appwriteDatabaseId = '691963ed003c37eb797f';
-  final String appwriteCollectionId = 'image';
+  final String appwriteCollectionId = 'image'; // Using 'image' collection
   final String appwriteBucketId = 'lens-s';
 
   late Client client;
@@ -75,7 +73,6 @@ class _LensScreenState extends State<LensScreen> {
       if (_lastDocumentId != null) {
         queries.add(Query.cursorAfter(_lastDocumentId!));
       }
-      // ignore: deprecated_member_use
       final response = await databases.listDocuments(
         databaseId: appwriteDatabaseId,
         collectionId: appwriteCollectionId,
@@ -121,8 +118,6 @@ class _LensScreenState extends State<LensScreen> {
       return;
     }
 
-    final link = await _showLinkDialog();
-
     setState(() {
       _isLoading = true;
     });
@@ -137,7 +132,6 @@ class _LensScreenState extends State<LensScreen> {
       final imageUrl =
           '$appwriteEndpoint/storage/buckets/$appwriteBucketId/files/${file.$id}/view?project=$appwriteProjectId';
 
-      // ignore: deprecated_member_use
       await databases.createDocument(
         databaseId: appwriteDatabaseId,
         collectionId: appwriteCollectionId,
@@ -146,7 +140,7 @@ class _LensScreenState extends State<LensScreen> {
           'title': 'New Image',
           'description': 'A beautiful new image',
           'imageUrl': imageUrl,
-          'link': link,
+          'link': 'https://example.com', // Example link
         },
       );
 
@@ -163,50 +157,14 @@ class _LensScreenState extends State<LensScreen> {
     }
   }
 
-    Future<String?> _showLinkDialog() async {
-    final TextEditingController controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add a link (optional)'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: "https://example.com"),
-        ),
-        actions: [
-          TextButton(
-            child: const Text('Cancel'),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          TextButton(
-            child: const Text('Upload'),
-            onPressed: () => Navigator.of(context).pop(controller.text),
-          ),
-        ],
+  void _launchUrl(String url) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WebViewScreen(url: url),
       ),
     );
   }
-
-  Future<void> _launchUrl(String urlString) async {
-    if (kIsWeb) {
-      final Uri url = Uri.parse(urlString);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url);
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch $urlString')),
-        );
-      }
-    } else {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => WebViewScreen(url: urlString),
-        ),
-      );
-    }
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -234,13 +192,13 @@ class _LensScreenState extends State<LensScreen> {
           SliverToBoxAdapter(
             child: GestureDetector(
               onTap: _uploadImage,
-              child: const Card(
-                margin: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Padding(
-                  padding: EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(16.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
+                    children: const [
                       Icon(Icons.camera_alt_outlined),
                       SizedBox(width: 8),
                       Text('Camera'),
@@ -277,10 +235,9 @@ class _LensScreenState extends State<LensScreen> {
                   final item = _items[index];
                   final isBigTile = (index % 3) == 0;
                   return GestureDetector(
-                     onTap: () {
-                      final link = item.data['link'];
-                      if (link != null && link.isNotEmpty) {
-                        _launchUrl(link);
+                    onTap: () {
+                      if (item.data['link'] != null) { // Using 'link' field
+                        _launchUrl(item.data['link']);
                       }
                     },
                     child: Card(
@@ -290,16 +247,13 @@ class _LensScreenState extends State<LensScreen> {
                         children: [
                           if (item.data['imageUrl'] != null)
                             Expanded(
-                              child: Image.network(
-                                item.data['imageUrl'],
+                              child: CachedNetworkImage(
+                                imageUrl: item.data['imageUrl'],
                                 fit: BoxFit.cover,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return const Center(child: CircularProgressIndicator());
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.error);
-                                },
+                                placeholder: (context, url) =>
+                                    const Center(child: CircularProgressIndicator()),
+                                errorWidget: (context, url, error) =>
+                                    const Icon(Icons.error),
                               ),
                             ),
                           if (item.data['title'] != null)

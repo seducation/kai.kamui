@@ -26,16 +26,16 @@ class _SettingPersonalInfoScreenState extends State<SettingPersonalInfoScreen> {
           return Container(
               width: 500, // Max width for tablet/desktop
               constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
-              child: const Column(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // --- Scrollable Form Content ---
                   Flexible(
                     child: SingleChildScrollView(
-                      padding: EdgeInsets.all(24.0),
+                      padding: const EdgeInsets.all(24.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                        children: const [
                           // Input fields using the custom widget
                           CustomNullTextField(
                             label: "title",

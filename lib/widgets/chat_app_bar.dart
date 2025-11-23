@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:my_app/profile_page_screen.dart';
 import 'package:shimmer/shimmer.dart';
@@ -43,22 +44,17 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
               height: 40,
               width: 40,
               child: ClipOval(
-                child: Image.network(
-                  urlImage,
+                child: CachedNetworkImage(
+                  imageUrl: urlImage,
                   fit: BoxFit.fill,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
-                      child: Container(
-                        color: Colors.white,
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(Icons.error);
-                  },
+                  placeholder: (context, url) => Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      color: Colors.white,
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => const Icon(Icons.error),
                 ),
               ),
             ),

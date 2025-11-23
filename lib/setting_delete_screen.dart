@@ -104,12 +104,12 @@ class DeleteAccountDialog extends StatelessWidget {
             const Divider(height: 1, color: Colors.grey),
 
             // --- Content ---
-            const Flexible(
+            Flexible(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  children: const [
                     Text(
                       "Are you sure you want to permanently delete your account?",
                       style: TextStyle(fontSize: 16, color: Colors.black87),

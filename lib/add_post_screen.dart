@@ -1,4 +1,5 @@
 
+import 'dart:io' as io;
 import 'dart:ui';
 
 import 'package:appwrite/appwrite.dart';
@@ -25,6 +26,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
   final _tagsController = TextEditingController();
   final _codeController = TextEditingController();
   final _appwriteService = AppwriteService();
+
+  List<PlatformFile> _selectedFiles = [];
 
   String _codeLang = 'javascript';
   bool _isLoading = false;
@@ -80,6 +83,14 @@ class _AddPostScreenState extends State<AddPostScreen> {
     final authService = Provider.of<AuthService>(context, listen: false);
 
     try {
+      // 1. Upload files
+      List<String> uploadedFileIds = [];
+      for (final file in _selectedFiles) {
+        final uploadedFile =
+            await _appwriteService.uploadFile(io.File(file.path!));
+        uploadedFileIds.add(uploadedFile.$id);
+      }
+
       final postData = {
         'titles': _titleController.text,
         'caption': _descriptionController.text,
@@ -89,7 +100,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
           'language': _codeLang,
           'content': _codeController.text,
         },
-        'file_ids': [],
+        'file_ids': uploadedFileIds,
       };
 
       await authService.createPost(postData);
@@ -112,6 +123,47 @@ class _AddPostScreenState extends State<AddPostScreen> {
         });
       }
     }
+  }
+
+  Future<void> _pickFile() async {
+    try {
+      // Use FilePicker to allow the user to select multiple files
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'pdf', 'doc', 'png'], // Example extensions
+      );
+
+      if (result != null) {
+        setState(() {
+          _selectedFiles = result.files;
+        });
+        _showSnackbar('Successfully selected ${_selectedFiles.length} file(s).');
+      } else {
+        // User canceled the picker
+        _showSnackbar('File selection cancelled.');
+      }
+    } catch (e) {
+      _showSnackbar('Error picking file: $e');
+    }
+  }
+
+  // Helper function to show a temporary message
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Function to remove a selected file
+  void _removeFile(PlatformFile file) {
+    setState(() {
+      _selectedFiles.remove(file);
+    });
+    _showSnackbar('File removed: ${file.name}');
   }
 
   @override
@@ -149,6 +201,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _buildAttachments(),
             const SizedBox(height: 16),
             // Title
             TextField(
@@ -288,5 +341,184 @@ class _AddPostScreenState extends State<AddPostScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildAttachments() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        // The main File Uploader/Dropzone UI
+        GestureDetector(
+          onTap: _pickFile,
+          child: FileUploadArea(
+            selectedFiles: _selectedFiles,
+            onRemove: _removeFile,
+          ),
+        ),
+
+        const SizedBox(height: 30),
+
+        // Display list of selected files (optional/visual confirmation)
+        if (_selectedFiles.isNotEmpty)
+          ..._selectedFiles.map((file) => Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: FileListItem(
+                    file: file, onRemove: () => _removeFile(file)),
+              )),
+
+        if (_selectedFiles.isNotEmpty) const SizedBox(height: 16),
+      ],
+    );
+  }
+}
+
+// Widget to handle the dashed border and core UI of the dropzone
+class FileUploadArea extends StatelessWidget {
+  final List<PlatformFile> selectedFiles;
+  final Function(PlatformFile) onRemove;
+
+  const FileUploadArea({
+    super.key,
+    required this.selectedFiles,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // CustomPaint is used to draw the dashed border easily
+    return CustomPaint(
+      painter: DashedRectPainter(color: Colors.blueGrey, strokeWidth: 2, gap: 5),
+      child: Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              const Icon(
+                Icons.cloud_upload,
+                color: Colors.blueAccent,
+                size: 50.0,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                selectedFiles.isEmpty
+                    ? 'Drag and drop or click to upload file(s)'
+                    : '${selectedFiles.length} file(s) selected.',
+                style: TextStyle(
+                  color: Colors.blueGrey.shade700,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const Text(
+                'Supported formats: JPG, PNG, PDF, DOC',
+                style: TextStyle(
+                  color: Colors.blueGrey,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Helper widget to display a list item for a selected file
+class FileListItem extends StatelessWidget {
+  final PlatformFile file;
+  final VoidCallback onRemove;
+
+  const FileListItem({
+    super.key,
+    required this.file,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.insert_drive_file, color: Colors.blueGrey),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              file.name,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Text(
+            '(${((file.size) / 1024).toStringAsFixed(1)} KB)',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          ),
+          const SizedBox(width: 10),
+          InkWell(
+            onTap: onRemove,
+            child: const Icon(Icons.close, size: 18, color: Colors.red),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Custom Painter for drawing the dashed border effect
+class DashedRectPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+
+  DashedRectPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.gap,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    Path path = Path();
+    path.addRRect(RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      const Radius.circular(12),
+    ));
+
+    Path dashedPath = Path();
+    double distance = 0.0;
+    for (PathMetric metric in path.computeMetrics()) {
+      while (distance < metric.length) {
+        dashedPath.addPath(
+          metric.extractPath(distance, distance + strokeWidth),
+          Offset.zero,
+        );
+        distance += strokeWidth + gap;
+      }
+      distance = 0.0;
+    }
+
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
   }
 }

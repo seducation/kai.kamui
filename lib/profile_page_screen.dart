@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/psv_about_tabscreen.dart';
@@ -61,25 +62,20 @@ class _ChannelProfilePageState extends State<ChannelProfilePage> with SingleTick
                 IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
               ],
               flexibleSpace: FlexibleSpaceBar(
-                background: Image.network(
-                  widget.imageUrl,
+                background: CachedNetworkImage(
+                  imageUrl: widget.imageUrl,
                   fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
-                      child: Container(
-                        color: Colors.white,
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.error, color: Colors.black),
-                    );
-                  },
+                  placeholder: (context, url) => Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      color: Colors.white,
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.error, color: Colors.black),
+                  ),
                 ),
               ),
             ),
@@ -98,24 +94,19 @@ class _ChannelProfilePageState extends State<ChannelProfilePage> with SingleTick
                           radius: 36,
                           backgroundColor: Colors.white,
                           child: ClipOval(
-                            child: Image.network(
-                              widget.imageUrl,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Shimmer.fromColors(
-                                  baseColor: Colors.grey[300]!,
-                                  highlightColor: Colors.grey[100]!,
-                                  child: Container(
-                                    color: Colors.white,
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.error, color: Colors.black),
-                                );
-                              },
+                            child: CachedNetworkImage(
+                              imageUrl: widget.imageUrl,
+                              placeholder: (context, url) => Shimmer.fromColors(
+                                baseColor: Colors.grey[300]!,
+                                highlightColor: Colors.grey[100]!,
+                                child: Container(
+                                  color: Colors.white,
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.error, color: Colors.black),
+                              ),
                             ),
                           ),
                         ),
