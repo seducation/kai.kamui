@@ -11,29 +11,34 @@ class SelectContactScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<ChatModel> contacts = [
       ChatModel(
+        userId: "691948bf001eb3eccd78",
         name: "Baby (You)",
         message: "Message yourself",
         time: "",
         imgPath: "assets/baby.jpg", // Placeholder logic handles missing asset
       ),
       ChatModel(
+          userId: "691948bf001eb3eccd79",
           name: "Alice",
           message: "Busy",
           time: "",
           imgPath: "",
           isOnline: true),
       ChatModel(
+          userId: "691948bf001eb3eccd80",
           name: "Alex Smith",
           message: "At the gym",
           time: "",
           imgPath: ""),
       ChatModel(
+          userId: "691948bf001eb3eccd81",
           name: "Andrew",
           message: "Urgent calls only",
           time: "",
           imgPath: ""),
-      ChatModel(name: "Mom", message: "Hey there! I am using WhatsApp.", time: "", imgPath: ""),
+      ChatModel(userId: "691948bf001eb3eccd82",name: "Mom", message: "Hey there! I am using WhatsApp.", time: "", imgPath: ""),
       ChatModel(
+          userId: "691948bf001eb3eccd83",
           name: "John Doe",
           message: "Battery about to die",
           time: "",
@@ -46,9 +51,9 @@ class SelectContactScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Column(
+        title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text("Select contact"),
             Text(
               "256 contacts",
