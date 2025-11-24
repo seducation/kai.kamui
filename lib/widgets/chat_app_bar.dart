@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 
 class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -8,6 +7,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final String onOff;
   final VoidCallback? onCallPressed;
+  final VoidCallback? onProfileTap;
 
   const ChatAppBar({
     super.key,
@@ -15,6 +15,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.title,
     required this.onOff,
     this.onCallPressed,
+    this.onProfileTap,
   });
 
   @override
@@ -27,11 +28,7 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
         icon: const Icon(Icons.arrow_back_rounded),
       ),
       title: InkWell(
-        onTap: () {
-          final name = Uri.encodeComponent(title);
-          final imageUrl = Uri.encodeComponent(urlImage);
-          context.go('/profile_page?name=$name&imageUrl=$imageUrl');
-        },
+        onTap: onProfileTap,
         child: Row(
           children: [
             SizedBox(

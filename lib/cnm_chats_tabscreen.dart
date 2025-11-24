@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:my_app/chat_messaging_screen.dart';
 import 'package:my_app/model/chat_model.dart';
 import 'package:my_app/one_time_message_screen.dart';
 import 'package:shimmer/shimmer.dart';
@@ -45,7 +45,15 @@ class CNMChatsTabscreen extends StatelessWidget {
                       return ChatListItem(
                           chat: chat,
                           onTap: () {
-                            context.go('/chat/${chat.userId}');
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatMessagingScreen(
+                                  chat: chat,
+                                  onMessageSent: (message) {},
+                                ),
+                              ),
+                            );
                           });
                     },
                     childCount: chatItems.length,
@@ -99,11 +107,16 @@ class StatusBar extends StatelessWidget {
                       ),
                     ),
                     child: CircleAvatar(
-                      radius: 35,
-                      backgroundImage: CachedNetworkImageProvider(chat.imgPath),
+                      radius: 34,
+                      backgroundImage: chat.imgPath.startsWith('http')
+                          ? CachedNetworkImageProvider(chat.imgPath)
+                          : null,
+                      child: !chat.imgPath.startsWith('http')
+                          ? const Icon(Icons.person)
+                          : null,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Text(
                     chat.name,
                     style: const TextStyle(color: Colors.black, fontSize: 12),
@@ -133,7 +146,12 @@ class ChatListItem extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: CircleAvatar(
           radius: 30,
-          backgroundImage: CachedNetworkImageProvider(chat.imgPath),
+          backgroundImage: chat.imgPath.startsWith('http')
+              ? CachedNetworkImageProvider(chat.imgPath)
+              : null,
+          child: !chat.imgPath.startsWith('http')
+              ? const Icon(Icons.person)
+              : null,
         ),
       ),
       title: Text(chat.name,

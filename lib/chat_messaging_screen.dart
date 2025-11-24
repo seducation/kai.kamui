@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:my_app/chat_call_screen.dart';
 import 'package:my_app/model/chat_model.dart';
 import 'package:my_app/widgets/chat_app_bar.dart';
@@ -22,6 +23,11 @@ class ChatMessagingScreen extends StatelessWidget {
             context,
             MaterialPageRoute(builder: (context) => const Panggilan()),
           );
+        },
+        onProfileTap: () {
+          final name = Uri.encodeComponent(chat.name);
+          final imageUrl = Uri.encodeComponent(chat.imgPath);
+          context.go('/profile_page?name=$name&imageUrl=$imageUrl');
         },
       ),
       body: ChatScr(onMessageSent: onMessageSent, message: chat.message),
