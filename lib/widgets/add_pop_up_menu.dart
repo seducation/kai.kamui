@@ -36,6 +36,18 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
             Provider.of<AppwriteService>(context, listen: false);
         final user = await appwriteService.getUser();
 
+        // --- Check for existing profile --- 
+        if (_selectedType == 'profile') {
+          final existingProfiles = await appwriteService.getUserProfiles(ownerId: user.$id);
+          if (existingProfiles.rows.any((row) => row.data['type'] == 'profile')) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('You can only create one main profile.')),
+            );
+            return; // Stop the creation process
+          }
+        }
+
         await appwriteService.createProfile(
           ownerId: user.$id,
           name: _nameController.text,

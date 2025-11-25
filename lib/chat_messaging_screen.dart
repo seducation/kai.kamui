@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/chat_call_screen.dart';
 import 'package:my_app/model/chat_model.dart';
 import 'package:my_app/widgets/chat_app_bar.dart';
+import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/models.dart' as models;
 
-class ChatMessagingScreen extends StatelessWidget {
+class ChatMessagingScreen extends StatefulWidget {
   final ChatModel chat;
   final Function(String) onMessageSent;
 
@@ -12,12 +16,120 @@ class ChatMessagingScreen extends StatelessWidget {
       {super.key, required this.chat, required this.onMessageSent});
 
   @override
+  State<ChatMessagingScreen> createState() => _ChatMessagingScreenState();
+}
+
+class _ChatMessagingScreenState extends State<ChatMessagingScreen> {
+  final TextEditingController _textController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  late final AppwriteService _appwriteService;
+  late final Realtime _realtime;
+  RealtimeSubscription? _subscription;
+  models.User? _currentUser;
+  String? _chatId;
+
+  final List<models.Row> _messages = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _appwriteService = AppwriteService();
+    _realtime = Realtime(_appwriteService.client);
+    _loadChat();
+  }
+
+  Future<void> _loadChat() async {
+    try {
+      _currentUser = await _appwriteService.getUser();
+      if (!mounted) return;
+
+      _chatId = _getChatId(_currentUser!.$id, widget.chat.userId);
+
+      // Fetch initial messages
+      final initialMessages = await _appwriteService.getMessages(
+        userId1: _currentUser!.$id,
+        userId2: widget.chat.userId,
+      );
+      setState(() {
+        _messages.addAll(initialMessages.rows.reversed);
+        _isLoading = false;
+      });
+
+      // Subscribe to real-time updates
+      _subscribeToMessages();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error loading chat: $e")),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _subscribeToMessages() {
+    const channel = 'databases.${AppwriteService.databaseId}.collections.${AppwriteService.messagesCollection}.documents';
+    _subscription = _realtime.subscribe([channel]);
+
+    _subscription!.stream.listen((response) {
+      if (response.events.contains("databases.*.collections.*.documents.*.create")) {
+        final newDocument = models.Row.fromMap(response.payload);
+        if (newDocument.data['chatId'] == _chatId) {
+          setState(() {
+            _messages.insert(0, newDocument);
+          });
+        }
+      }
+    });
+  }
+
+  String _getChatId(String userId1, String userId2) {
+    final ids = [userId1, userId2]..sort();
+    return ids.join('_');
+  }
+
+  Future<void> _handleSubmitted(String text) async {
+    if (text.trim().isEmpty || _currentUser == null) return;
+
+    _textController.clear();
+    _focusNode.requestFocus();
+
+    try {
+      await _appwriteService.sendMessage(
+        senderId: _currentUser!.$id,
+        receiverId: widget.chat.userId,
+        message: text.trim(),
+      );
+      // The real-time listener will handle adding the message to the UI
+      widget.onMessageSent(text.trim());
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to send message: $e")),
+      );
+      // If sending fails, add the message back to the text field for resending
+      _textController.text = text;
+    }
+  }
+
+  @override
+  void dispose() {
+    _subscription?.close();
+    _textController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: ChatAppBar(
-        urlImage: chat.imgPath,
-        title: chat.name,
-        onOff: chat.isOnline ? "Online" : "Offline",
+        urlImage: widget.chat.imgPath,
+        title: widget.chat.name,
+        onOff: widget.chat.isOnline ? "Online" : "Offline",
         onCallPressed: () {
           Navigator.push(
             context,
@@ -25,45 +137,64 @@ class ChatMessagingScreen extends StatelessWidget {
           );
         },
         onProfileTap: () {
-          final name = Uri.encodeComponent(chat.name);
-          final imageUrl = Uri.encodeComponent(chat.imgPath);
+          final name = Uri.encodeComponent(widget.chat.name);
+          final imageUrl = Uri.encodeComponent(widget.chat.imgPath);
           context.go('/profile_page?name=$name&imageUrl=$imageUrl');
         },
       ),
-      body: ChatScr(onMessageSent: onMessageSent, message: chat.message),
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage("web/icons/Icon-512.png"),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Column(
+          children: [
+            Flexible(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _messages.isEmpty
+                      ? _buildEmptyChatView()
+                      : _buildMessageList(),
+            ),
+            const Divider(height: 1.0),
+            Container(
+              decoration: BoxDecoration(color: Theme.of(context).cardColor),
+              child: _buildTextComposer(),
+            ),
+          ],
+        ),
+      ),
     );
   }
-}
 
-class ChatScr extends StatefulWidget {
-  final Function(String) onMessageSent;
-  final String message;
-  const ChatScr({super.key, required this.onMessageSent, required this.message});
-
-  @override
-  State<ChatScr> createState() => _ChatScrState();
-}
-
-class _ChatScrState extends State<ChatScr> with TickerProviderStateMixin {
-  final _textController = TextEditingController();
-  final List<String> _messages = [];
-  final FocusNode _focusNode = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.message.isNotEmpty) {
-      _messages.insert(0, widget.message);
-    }
+  Widget _buildMessageList() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(8.0),
+      reverse: true,
+      itemCount: _messages.length,
+      itemBuilder: (_, index) {
+        final message = _messages[index];
+        final isMe = message.data['senderId'] == _currentUser!.$id;
+        return _buildMessageBubble(message.data['message'], isMe);
+      },
+    );
   }
 
-  void _handleSubmitted(String text) {
-    _textController.clear();
-    setState(() {
-      _messages.insert(0, text);
-    });
-    widget.onMessageSent(text);
-    _focusNode.requestFocus();
+  Widget _buildMessageBubble(String message, bool isMe) {
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+        decoration: BoxDecoration(
+          color: isMe ? Colors.blue : Colors.grey[700],
+          borderRadius: BorderRadius.circular(20.0),
+        ),
+        child: Text(message, style: const TextStyle(color: Colors.white)),
+      ),
+    );
   }
 
   Widget _buildTextComposer() {
@@ -97,70 +228,29 @@ class _ChatScrState extends State<ChatScr> with TickerProviderStateMixin {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage("web/icons/Icon-512.png"),
-          fit: BoxFit.cover,
+  Widget _buildEmptyChatView() {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.black.withAlpha(128),
+          borderRadius: BorderRadius.circular(10),
         ),
-      ),
-      child: Column(
-        children: [
-          Flexible(
-            child: _messages.isEmpty
-                ? Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(128),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            "No messages here yet...",
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            "Send a message to start the conversation.",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(8.0),
-                    reverse: true,
-                    itemCount: _messages.length,
-                    itemBuilder: (_, index) {
-                      final message = _messages[index];
-                      return Align(
-                        alignment: Alignment.centerRight,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 4.0),
-                          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                          decoration: BoxDecoration(
-                            color: Colors.blue,
-                            borderRadius: BorderRadius.circular(20.0),
-                          ),
-                          child: Text(message, style: const TextStyle(color: Colors.white)),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          const Divider(height: 1.0),
-          Container(
-            decoration: BoxDecoration(color: Theme.of(context).cardColor),
-            child: _buildTextComposer(),
-          ),
-        ],
+        child: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "No messages here yet...",
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Text(
+              "Send a message to start the conversation.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
       ),
     );
   }

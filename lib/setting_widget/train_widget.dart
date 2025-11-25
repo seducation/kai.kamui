@@ -17,7 +17,7 @@ class TrainSearchWidget extends StatelessWidget {
             borderRadius: BorderRadius.circular(15.0),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
+                color: Colors.grey.withAlpha(51),
                 spreadRadius: 2,
                 blurRadius: 5,
                 offset: const Offset(0, 3),
@@ -252,7 +252,7 @@ class TrainSearchWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(25),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.4),
+            color: Colors.blue.withAlpha(102),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 3),

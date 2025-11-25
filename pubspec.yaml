@@ -9,7 +9,6 @@ environment:
 dependencies:
   cupertino_icons: ^1.0.8
   algoliasearch: ^1.1.2
-  appwrite: ^20.3.2
   cached_network_image: ^3.4.1
   flutter:
     sdk: flutter
@@ -33,6 +32,7 @@ dependencies:
   url_launcher: ^6.3.0
   mime: ^2.0.0
   web_socket_channel: ^3.0.3
+  appwrite: ^20.3.2
 
 dev_dependencies:
   flutter_test:

@@ -17,34 +17,39 @@ class SelectContactScreen extends StatelessWidget {
         name: "Baby (You)",
         message: "Message yourself",
         time: "",
-        imgPath: "assets/baby.jpg", // Placeholder logic handles missing asset
+        imgPath: "https://picsum.photos/200/300",
       ),
       ChatModel(
           userId: "691948bf001eb3eccd79",
           name: "Alice",
           message: "Busy",
           time: "",
-          imgPath: "",
+          imgPath: "https://picsum.photos/200/300",
           isOnline: true),
       ChatModel(
           userId: "691948bf001eb3eccd80",
           name: "Alex Smith",
           message: "At the gym",
           time: "",
-          imgPath: ""),
+          imgPath: "https://picsum.photos/200/300"),
       ChatModel(
           userId: "691948bf001eb3eccd81",
           name: "Andrew",
           message: "Urgent calls only",
           time: "",
-          imgPath: ""),
-      ChatModel(userId: "691948bf001eb3eccd82",name: "Mom", message: "Hey there! I am using WhatsApp.", time: "", imgPath: ""),
+          imgPath: "https://picsum.photos/200/300"),
+      ChatModel(
+          userId: "691948bf001eb3eccd82",
+          name: "Mom",
+          message: "Hey there! I am using WhatsApp.",
+          time: "",
+          imgPath: "https://picsum.photos/200/300"),
       ChatModel(
           userId: "691948bf001eb3eccd83",
           name: "John Doe",
           message: "Battery about to die",
           time: "",
-          imgPath: ""),
+          imgPath: "https://picsum.photos/200/300"),
     ];
 
     return Scaffold(
@@ -227,8 +232,9 @@ class ContactItem extends StatelessWidget {
       leading: CircleAvatar(
         radius: 22,
         backgroundColor: Colors.grey[300],
-        backgroundImage:
-            contact.imgPath.isNotEmpty ? AssetImage(contact.imgPath) : null,
+        backgroundImage: contact.imgPath.isNotEmpty
+            ? NetworkImage(contact.imgPath)
+            : null,
         child: contact.imgPath.isEmpty
             ? Text(
                 contact.name.isNotEmpty ? contact.name[0] : "",

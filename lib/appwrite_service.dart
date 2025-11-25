@@ -9,6 +9,8 @@ class AppwriteService {
   late Storage _storage;
   late Account _account;
 
+  Client get client => _client; 
+
   static const String databaseId = "691963ed003c37eb797f";
   static const String profilesCollection = "profiles";
   static const String messagesCollection = "messages";
@@ -87,7 +89,7 @@ class AppwriteService {
         'bannerImageUrl': bannerImageUrl,
       },
       permissions: [
-        Permission.read(Role.user(ownerId)),
+        Permission.read(Role.users()),
         Permission.update(Role.user(ownerId)),
         Permission.delete(Role.user(ownerId)),
       ],
@@ -137,6 +139,10 @@ class AppwriteService {
         'senderId': senderId,
         'message': message,
       },
+       permissions: [
+        Permission.read(Role.user(senderId)),
+        Permission.read(Role.user(receiverId)),
+      ],
     );
   }
 

@@ -75,6 +75,14 @@ class _FindAccountPageScreenState extends State<FindAccountPageScreen> {
     }
   }
 
+  bool _isValidUrl(String? url) {
+    if (url == null || url.isEmpty) {
+      return false;
+    }
+    final uri = Uri.tryParse(url);
+    return uri != null && uri.hasScheme && uri.hasAuthority;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -135,10 +143,10 @@ class _FindAccountPageScreenState extends State<FindAccountPageScreen> {
         );
         return ListTile(
           leading: CircleAvatar(
-            backgroundImage: profile.imageUrl != null
+            backgroundImage: _isValidUrl(profile.imageUrl)
                 ? NetworkImage(profile.imageUrl!)
                 : null,
-            child: profile.imageUrl == null
+            child: !_isValidUrl(profile.imageUrl)
                 ? const Icon(Icons.person)
                 : null,
           ),
