@@ -5,7 +5,6 @@ import 'package:my_app/find_account_page_screen.dart';
 import 'package:my_app/model/chat_model.dart';
 import 'package:my_app/sign_in.dart';
 import 'package:provider/provider.dart';
-import 'package:appwrite/models.dart' as models;
 
 class SelectContactScreen extends StatefulWidget {
   const SelectContactScreen({super.key, required this.onNewChat});
@@ -20,53 +19,65 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
   late final AppwriteService _appwriteService;
   List<ChatModel> _contacts = [];
   bool _isLoading = true;
-  models.User? _currentUser;
+  bool _didInitialize = false;
 
   @override
-  void initState() {
-    super.initState();
-    _appwriteService = context.read<AppwriteService>();
-    _loadFollowingContacts();
-  }
-
-  Future<void> _loadFollowingContacts() async {
-    try {
-      _currentUser = await _appwriteService.getUser();
-      if (!mounted) return;
-      final profiles = await _appwriteService.getFollowingProfiles(userId: _currentUser!.$id);
-      if (!mounted) return;
-
-      final contactList = profiles.rows
-          .map((doc) => ChatModel(
-                userId: doc.data['ownerId'], // Correctly use the ownerId for messaging
-                name: doc.data['name'] ?? 'No Name',
-                message: doc.data['status'] ?? 'No Status',
-                time: "",
-                imgPath: doc.data['profileImageUrl'] ?? "",
-              ))
-          .toList();
-
-      setState(() {
-        _contacts = contactList;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error loading contacts: $e")),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-      }
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didInitialize) {
+      _didInitialize = true;
+      _appwriteService = context.read<AppwriteService>();
+      _loadFollowingContacts();
     }
   }
 
+  Future<void> _loadFollowingContacts() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    List<ChatModel> contactList = [];
+    String? error;
+    try {
+      final currentUser = await _appwriteService.getUser();
+      if (!mounted) return;
+
+      final profiles = await _appwriteService.getFollowingProfiles(userId: currentUser.$id);
+      if (!mounted) return;
+
+      contactList = profiles.rows.map((doc) {
+        final data = doc.data;
+        return ChatModel(
+          userId: data['ownerId']?.toString() ?? '',
+          name: data['name']?.toString() ?? 'No Name',
+          message: data['status']?.toString() ?? 'No Status',
+          time: "",
+          imgPath: data['profileImageUrl']?.toString() ?? '',
+        );
+      }).where((contact) => contact.userId.isNotEmpty).toList();
+
+    } catch (e) {
+      error = "Error loading contacts: $e";
+    }
+
+    if (!mounted) return;
+
+    if (error != null) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+    }
+    setState(() {
+      if (error == null) {
+        _contacts = contactList;
+      }
+      _isLoading = false;
+    });
+  }
+
   Future<void> _handleContactTap(ChatModel contact) async {
+    final navigator = Navigator.of(context);
     try {
       await _appwriteService.getUser(); // Ensure user is still logged in
       if (!mounted) return;
-      Navigator.of(context).push(
+      await navigator.push(
         MaterialPageRoute(
           builder: (context) => ChatMessagingScreen(
             chat: contact,
@@ -82,7 +93,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     } catch (e) {
       if (!mounted) return;
       // If getUser fails, it means session expired
-      Navigator.of(context).pushReplacement(
+      await navigator.pushReplacement(
         MaterialPageRoute(
           builder: (context) => const SignInScreen(),
         ),
@@ -119,7 +130,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-                Navigator.push(
+              Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const FindAccountPageScreen(),
@@ -157,6 +168,14 @@ class ContactItem extends StatelessWidget {
 
   const ContactItem({super.key, required this.contact, required this.onTap});
 
+  bool _isValidUrl(String? url) {
+    if (url == null || url.isEmpty) {
+      return false;
+    }
+    final uri = Uri.tryParse(url);
+    return uri != null && uri.hasScheme && uri.hasAuthority;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -166,11 +185,11 @@ class ContactItem extends StatelessWidget {
       leading: CircleAvatar(
         radius: 22,
         backgroundColor: Colors.grey[300],
-        // Use a placeholder if the image path is empty
-        backgroundImage: (contact.imgPath.isNotEmpty && Uri.parse(contact.imgPath).isAbsolute) 
+        // Use a placeholder if the image path is empty or invalid
+        backgroundImage: _isValidUrl(contact.imgPath)
             ? NetworkImage(contact.imgPath)
             : null,
-        child: (contact.imgPath.isEmpty || !Uri.parse(contact.imgPath).isAbsolute)
+        child: !_isValidUrl(contact.imgPath)
             ? Text(
                 contact.name.isNotEmpty ? contact.name[0] : "",
                 style: TextStyle(

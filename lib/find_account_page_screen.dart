@@ -141,6 +141,7 @@ class _FindAccountPageScreenState extends State<FindAccountPageScreen> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error updating follow status: $e")),
       );
@@ -228,7 +229,7 @@ class _FindAccountPageScreenState extends State<FindAccountPageScreen> {
           onTap: () {
             // Optional: Navigate to profile details page or chat
             final chatModel = ChatModel(
-              userId: profile.id, // This should be the PROFILE ID
+              userId: profile.ownerId, // This should be the USER ID
               name: profile.name,
               message: profile.bio ?? '',
               time: '',
