@@ -1,15 +1,17 @@
 class Profile {
   final String id;
   final String name;
+  final String type;
   final String? bio;
-  final String? imageUrl;
+  final String? profileImageUrl;
   final String ownerId;
 
   Profile({
     required this.id,
     required this.name,
+    required this.type,
     this.bio,
-    this.imageUrl,
+    this.profileImageUrl,
     required this.ownerId,
   });
 
@@ -17,8 +19,9 @@ class Profile {
     return Profile(
       id: id,
       name: map['name'] ?? '',
+      type: map['type'] ?? 'profile', // Default to profile
       bio: map['bio'],
-      imageUrl: map['imageUrl'],
+      profileImageUrl: map['profileImageUrl'],
       ownerId: map['ownerId'] ?? '',
     );
   }

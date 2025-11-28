@@ -7,13 +7,10 @@ class SettingActiveStatusScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Active Status'),
+        title: const Text('Active Status Settings'),
       ),
       body: const Center(
-        child: Text(
-          'Active Status',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
+        child: Text('This screen is under construction.'),
       ),
     );
   }

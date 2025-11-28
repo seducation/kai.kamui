@@ -1,13 +1,354 @@
-
 import 'package:flutter/material.dart';
+
+// ---------------------------------------------------------------------------
+// 1. DATA MODELS ( The "Base" Structure )
+// ---------------------------------------------------------------------------
+
+enum PostType { text, image, linkPreview, video }
+
+class User {
+  final String name;
+  final String handle;
+  final String avatarUrl;
+  final bool isVerified;
+
+  User({
+    required this.name,
+    required this.handle,
+    required this.avatarUrl,
+    this.isVerified = false,
+  });
+}
+
+class PostStats {
+  final int likes;
+  final int comments;
+  final int shares;
+  final int views;
+
+  PostStats({this.likes = 0, this.comments = 0, this.shares = 0, this.views = 0});
+}
+
+class Post {
+  final String id;
+  final User author;
+  final String timestamp;
+  final String contentText;
+  final PostType type;
+  final String? mediaUrl; // Image URL or Link Preview Image
+  final String? linkUrl;  // For Link Previews
+  final String? linkTitle; // For Link Previews
+  final PostStats stats;
+
+  Post({
+    required this.id,
+    required this.author,
+    required this.timestamp,
+    required this.contentText,
+    this.type = PostType.text,
+    this.mediaUrl,
+    this.linkUrl,
+    this.linkTitle,
+    required this.stats,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 2. MOCK DATA REPOSITORY
+// ---------------------------------------------------------------------------
+
+class MockData {
+  static final User currentUser = User(
+    name: "Alex Designer",
+    handle: "@alex_ux",
+    avatarUrl: "https://i.pravatar.cc/150?u=alex",
+  );
+
+  static final User techSource = User(
+    name: "Android for PCs",
+    handle: "@android_pc_mods",
+    avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/d/db/Android_robot_2014.svg", // Placeholder
+    isVerified: true,
+  );
+
+  static final User gamingSource = User(
+    name: "Warzone Updates",
+    handle: "@cod_warfare",
+    avatarUrl: "https://i.pravatar.cc/150?u=gaming",
+  );
+
+   static final User animeSource = User(
+    name: "Shonen Jump Daily",
+    handle: "@shonen_leaks",
+    avatarUrl: "https://i.pravatar.cc/150?u=anime",
+    isVerified: true,
+  );
+
+  static List<Post> getFeed() {
+    return [
+      // 1. Link Preview Style (Like the Apple News item)
+      Post(
+        id: '1',
+        author: techSource,
+        timestamp: "6d",
+        contentText: "We've overhauled our list of the best TVs to give you the most up-to-date recommendations – just in time for the holidays.",
+        type: PostType.linkPreview,
+        mediaUrl: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=800&q=80", // iPhone/Apple image
+        linkTitle: "Apple Inc. is a multinational technology company known for its consumer electronics.",
+        linkUrl: "apple.com",
+        stats: PostStats(likes: 1240, comments: 45, shares: 120, views: 15000),
+      ),
+      // 2. Large Image Media Style (Like the Ghost Skin item)
+      Post(
+        id: '2',
+        author: gamingSource,
+        timestamp: "2h",
+        contentText: "The new Free Ghost Skin is absolutely CRAZY! 🤯 Check out the details below.",
+        type: PostType.image,
+        mediaUrl: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?auto=format&fit=crop&w=800&q=80", // Tactical gear image
+        stats: PostStats(likes: 8500, comments: 230, shares: 1400, views: 654000),
+      ),
+      // 3. Text Only Style
+      Post(
+        id: '3',
+        author: currentUser,
+        timestamp: "Just now",
+        contentText: "Just finished designing a new UI in Flutter. The declarative syntax makes building complex lists so much easier! #FlutterDev #UI",
+        type: PostType.text,
+        stats: PostStats(likes: 12, comments: 2, shares: 0, views: 45),
+      ),
+       // 4. Anime Image Style
+      Post(
+        id: '4',
+        author: animeSource,
+        timestamp: "12h",
+        contentText: "Vegeta's pride is on the line in the upcoming chapter. Who else is hyped?",
+        type: PostType.image,
+        mediaUrl: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=800&q=80", // Anime vibe
+        stats: PostStats(likes: 15000, comments: 890, shares: 3400, views: 250000),
+      ),
+    ];
+  }
+}
 
 class HMVShortsTabscreen extends StatelessWidget {
   const HMVShortsTabscreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Shorts'),
+    final posts = MockData.getFeed().where((p) => p.type == PostType.image).toList();
+    return ShortsViewerScreen(posts: posts, initialIndex: 0);
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// 4. DETAIL PAGE (Article/Wikipedia Style)
+// ---------------------------------------------------------------------------
+
+class DetailPage extends StatelessWidget {
+  final Post post;
+
+  const DetailPage({super.key, required this.post});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(post.linkUrl ?? "Details", style: TextStyle(color: Colors.grey[400], fontSize: 14)),
+        actions: [
+          IconButton(onPressed: () {}, icon: const Icon(Icons.share_outlined)),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert)),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (post.mediaUrl != null)
+              Image.network(post.mediaUrl!,
+                  width: double.infinity, height: 250, fit: BoxFit.cover),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    post.linkTitle ?? post.contentText,
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundImage: NetworkImage(post.author.avatarUrl),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        post.author.name,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 30, color: Colors.white12),
+                  Text(
+                    post.contentText,
+                    style: TextStyle(fontSize: 16, color: Colors.grey[300], height: 1.5),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "This is the expanded content section, simulating the full page view you requested, similar to a Medium article or YouTube video description. Here, you would find paragraphs of text, more images, comments, and related videos, depending on a platform being mimicked.",
+                    style: TextStyle(fontSize: 16, color: Colors.grey[300], height: 1.5),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 5. SHORTS VIEWER (YouTube Shorts/TikTok Style)
+// ---------------------------------------------------------------------------
+
+class ShortsViewerScreen extends StatefulWidget {
+  final List<Post> posts;
+  final int initialIndex;
+
+  const ShortsViewerScreen({super.key, required this.posts, required this.initialIndex});
+
+  @override
+  ShortsViewerScreenState createState() => ShortsViewerScreenState();
+}
+
+class ShortsViewerScreenState extends State<ShortsViewerScreen> {
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      backgroundColor: Colors.black,
+      body: PageView.builder(
+        controller: _pageController,
+        scrollDirection: Axis.vertical,
+        itemCount: widget.posts.length,
+        itemBuilder: (context, index) {
+          return ShortsPage(post: widget.posts[index]);
+        },
+      ),
+    );
+  }
+}
+
+class ShortsPage extends StatelessWidget {
+  final Post post;
+
+  const ShortsPage({super.key, required this.post});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          post.mediaUrl!,
+          fit: BoxFit.cover,
+        ),
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.black.withAlpha(178), Colors.transparent, Colors.black.withAlpha(178)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [0.0, 0.4, 1.0],
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 20,
+          left: 16,
+          right: 16,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundImage: NetworkImage(post.author.avatarUrl),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    post.author.handle,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                post.contentText,
+                style: const TextStyle(color: Colors.white),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DetailPage(post: post),
+                    ),
+                  );
+                },
+                child: const Row(
+                  children: [
+                    Icon(Icons.link, color: Colors.blueAccent, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      "View Details",
+                      style: TextStyle(
+                        color: Colors.blueAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

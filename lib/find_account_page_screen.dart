@@ -213,10 +213,10 @@ class _FindAccountPageScreenState extends State<FindAccountPageScreen> {
         final isFollowing = _followingProfileIds.contains(profile.id);
         return ListTile(
           leading: CircleAvatar(
-            backgroundImage: _isValidUrl(profile.imageUrl)
-                ? NetworkImage(profile.imageUrl!)
+            backgroundImage: _isValidUrl(profile.profileImageUrl)
+                ? NetworkImage(profile.profileImageUrl!)
                 : null,
-            child: !_isValidUrl(profile.imageUrl)
+            child: !_isValidUrl(profile.profileImageUrl)
                 ? const Icon(Icons.person)
                 : null,
           ),
@@ -233,7 +233,7 @@ class _FindAccountPageScreenState extends State<FindAccountPageScreen> {
               name: profile.name,
               message: profile.bio ?? '',
               time: '',
-              imgPath: profile.imageUrl ?? '',
+              imgPath: profile.profileImageUrl ?? '',
             );
             Navigator.push(
               context,

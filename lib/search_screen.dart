@@ -72,11 +72,13 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Row(
         children: [
           IconButton(
-            icon: Icon(Icons.menu, color: theme.colorScheme.onSurface.withAlpha(153)),
+            icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface.withAlpha(153)),
             onPressed: () {
-               final name = Uri.encodeComponent("User 1");
-               final imageUrl = Uri.encodeComponent("https://picsum.photos/seed/p1/200/200");
-               context.go('/profile_page?name=$name&imageUrl=$imageUrl');
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/');
+              }
             },
           ),
           const SizedBox(width: 8),

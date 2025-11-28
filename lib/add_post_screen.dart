@@ -4,10 +4,8 @@ import 'package:appwrite/appwrite.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 import 'appwrite_service.dart';
-import 'auth_service.dart';
 
 // Mimics the functionality of the provided React PostEditor component.
 class AddPostScreen extends StatefulWidget {
@@ -66,7 +64,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     );
   }
 
-  Future<void> _submitPost() async {
+  Future<void> _continueToPostDestination() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please add a title')),
@@ -77,8 +75,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
     setState(() {
       _isLoading = true;
     });
-
-    final authService = Provider.of<AuthService>(context, listen: false);
 
     try {
       // 1. Upload files
@@ -105,17 +101,14 @@ class _AddPostScreenState extends State<AddPostScreen> {
         'file_ids': uploadedFileIds,
       };
 
-      await authService.createPost(postData);
+      // Navigate to the next screen, passing the post data
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Post created!')),
-        );
-        context.go('/');
+        context.go('/where_to_post', extra: postData);
       }
     } on AppwriteException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create post: ${e.message}')),
+          SnackBar(content: Text('Failed to upload files: ${e.message}')),
         );
       }
     } finally {
@@ -186,7 +179,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton(
-              onPressed: _isLoading ? null : _submitPost,
+              onPressed: _isLoading ? null : _continueToPostDestination,
               child: _isLoading
                   ? const SizedBox(
                       height: 20,

@@ -6,6 +6,7 @@ import 'package:my_app/search_screen.dart';
 import 'package:my_app/sign_in.dart';
 import 'package:my_app/sign_up.dart';
 import 'package:my_app/home_screen.dart';
+import 'package:my_app/where_to_post.dart';
 
 class AppRouter {
   final AuthService authService;
@@ -46,6 +47,10 @@ class AppRouter {
         path: '/profile/:id',
         builder: (context, state) =>
             ProfileScreen(userId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/where_to_post',
+        builder: (context, state) => WhereToPostScreen(postData: state.extra as Map<String, dynamic>),
       ),
     ],
     redirect: (context, state) {

@@ -7,13 +7,10 @@ class SettingLocationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Location'),
+        title: const Text('Location Settings'),
       ),
       body: const Center(
-        child: Text(
-          'Location',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
+        child: Text('This screen is under construction.'),
       ),
     );
   }

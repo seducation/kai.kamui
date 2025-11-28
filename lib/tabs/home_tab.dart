@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 // ---------------------------------------------------------------------------
-// 1. DATA MODELS (The "Base" Structure)
+// 1. DATA MODELS ( The "Base" Structure )
 // ---------------------------------------------------------------------------
 
 enum PostType { text, image, linkPreview, video }
@@ -36,7 +36,7 @@ class Post {
   final String contentText;
   final PostType type;
   final String? mediaUrl; // Image URL or Link Preview Image
-  final String? linkUrl; // For Link Previews
+  final String? linkUrl;  // For Link Previews
   final String? linkTitle; // For Link Previews
   final PostStats stats;
 
@@ -77,7 +77,7 @@ class MockData {
     avatarUrl: "https://i.pravatar.cc/150?u=gaming",
   );
 
-  static final User animeSource = User(
+   static final User animeSource = User(
     name: "Shonen Jump Daily",
     handle: "@shonen_leaks",
     avatarUrl: "https://i.pravatar.cc/150?u=anime",
@@ -117,7 +117,7 @@ class MockData {
         type: PostType.text,
         stats: PostStats(likes: 12, comments: 2, shares: 0, views: 45),
       ),
-      // 4. Anime Image Style
+       // 4. Anime Image Style
       Post(
         id: '4',
         author: animeSource,
@@ -131,71 +131,16 @@ class MockData {
   }
 }
 
-class ResultsSearches extends StatefulWidget {
-  final String query;
 
-  const ResultsSearches({super.key, required this.query});
-
-  @override
-  State<ResultsSearches> createState() => _ResultsSearchesState();
-}
-
-class _ResultsSearchesState extends State<ResultsSearches> {
-  late TextEditingController _searchController;
-  String _currentQuery = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _currentQuery = widget.query;
-    _searchController = TextEditingController(text: _currentQuery);
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _updateSearchQuery(String newQuery) {
-    setState(() {
-      _currentQuery = newQuery;
-    });
-  }
+class HomeTab extends StatelessWidget {
+  const HomeTab({super.key});
 
   @override
   Widget build(BuildContext context) {
     final posts = MockData.getFeed();
+
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
-        title: TextField(
-          controller: _searchController,
-          autofocus: true,
-          decoration: const InputDecoration.collapsed(
-            hintText: 'Search',
-          ),
-          onChanged: (value) {
-            setState(() {});
-          },
-          onSubmitted: _updateSearchQuery,
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => _updateSearchQuery(_searchController.text),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {},
-          ),
-        ],
-      ),
+      backgroundColor: Colors.black,
       body: ListView.separated(
         itemCount: posts.length,
         separatorBuilder: (context, index) => const Divider(height: 1, color: Colors.white24),
@@ -214,6 +159,7 @@ class PostWidget extends StatelessWidget {
   final Post post;
   final List<Post> allPosts;
 
+
   const PostWidget({super.key, required this.post, required this.allPosts});
 
   @override
@@ -231,7 +177,7 @@ class PostWidget extends StatelessWidget {
             backgroundColor: Colors.grey[800],
           ),
           const SizedBox(width: 12),
-
+          
           // Right: Content
           Expanded(
             child: Column(
@@ -369,7 +315,7 @@ class PostWidget extends StatelessWidget {
                     post.linkTitle ?? "Link Preview",
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -625,7 +571,7 @@ class ShortsPage extends StatelessWidget {
             ],
           ),
         ),
-        Positioned(
+         Positioned(
           top: 40,
           left: 16,
           child: IconButton(
