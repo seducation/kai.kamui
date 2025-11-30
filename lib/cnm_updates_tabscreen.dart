@@ -116,62 +116,65 @@ class TimeGrid extends StatelessWidget {
         final double totalWidth = constraints.maxWidth;
         final double dayWidth = totalWidth / 5; // 5 days: Mon-Fri
 
-        return Stack(
-          children: [
-            // Layer 1: Grid Lines and Time Labels
-            Positioned.fill(
-              child: Row(
-                children: [
-                  // Time Column
-                  SizedBox(
-                    width: 50,
-                    child: Column(
-                      children: List.generate(totalHours, (i) {
-                        return Container(
-                          height: hourHeight,
-                          alignment: Alignment.topCenter,
-                          child: Text(
-                            "${i.toString().padLeft(2, '0')}:00",
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[500],
+        return SizedBox(
+          height: hourHeight * totalHours,
+          child: Stack(
+            children: [
+              // Layer 1: Grid Lines and Time Labels
+              Positioned.fill(
+                child: Row(
+                  children: [
+                    // Time Column
+                    SizedBox(
+                      width: 50,
+                      child: Column(
+                        children: List.generate(totalHours, (i) {
+                          return Container(
+                            height: hourHeight,
+                            alignment: Alignment.topCenter,
+                            child: Text(
+                              "${i.toString().padLeft(2, '0')}:00",
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[500],
+                              ),
                             ),
-                          ),
-                        );
-                      }),
+                          );
+                        }),
+                      ),
                     ),
-                  ),
-                  // Days Grid
-                  Expanded(
-                    child: Column(
-                      children: List.generate(totalHours, (i) {
-                        return Container(
-                          height: hourHeight,
-                          decoration: BoxDecoration(
-                            border: Border(top: BorderSide(color: Colors.grey[200]!)),
-                          ),
-                        );
-                      }),
+                    // Days Grid
+                    Expanded(
+                      child: Column(
+                        children: List.generate(totalHours, (i) {
+                          return Container(
+                            height: hourHeight,
+                            decoration: BoxDecoration(
+                              border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                            ),
+                          );
+                        }),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            // Layer 2: Events
-            // Client Meeting: Mon (0), 10am - 12pm
-            _buildEventBlock(dayWidth, 0, 10, 2, "Client Meeting"),
-            
-            // Project Meeting: Mon (0), 2pm - 4pm
-            _buildEventBlock(dayWidth, 0, 14, 2, "Project Meeting"),
-            
-            // Football Match: Wed (2), 2pm - 5pm
-            _buildEventBlock(dayWidth, 2, 14, 3, "Football Match"),
+              // Layer 2: Events
+              // Client Meeting: Mon (0), 10am - 12pm
+              _buildEventBlock(dayWidth, 0, 10, 2, "Client Meeting"),
+              
+              // Project Meeting: Mon (0), 2pm - 4pm
+              _buildEventBlock(dayWidth, 0, 14, 2, "Project Meeting"),
+              
+              // Football Match: Wed (2), 2pm - 5pm
+              _buildEventBlock(dayWidth, 2, 14, 3, "Football Match"),
 
-            // Joe's Birthday: Fri (4), 7pm - 8pm
-            _buildEventBlock(dayWidth, 4, 19, 2, "Joe's Birthday"), // Made height 2h to match visual length in image
+              // Joe's Birthday: Fri (4), 7pm - 8pm
+              _buildEventBlock(dayWidth, 4, 19, 2, "Joe's Birthday"), // Made height 2h to match visual length in image
 
-          ],
+            ],
+          ),
         );
       },
     );
