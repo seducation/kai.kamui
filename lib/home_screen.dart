@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'hmv_features_tabscreen.dart';
@@ -181,6 +182,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         final tabBarView = TabBarView(
           controller: _mainTabController,
+          dragStartBehavior: DragStartBehavior.start,
           children: _tabs.map<Widget>((name) {
             if (name == 'search tools') {
               // The reorderable part of the list excludes the first 2 tabs.
@@ -209,45 +211,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
 
         if (_mainTabController.index == 0) {
-          final appBar = AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            automaticallyImplyLeading: false,
-            flexibleSpace: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withAlpha(179),
-                    Colors.transparent,
-                  ],
+          return Scaffold(
+            extendBodyBehindAppBar: true,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              automaticallyImplyLeading: false,
+              flexibleSpace: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withAlpha(179),
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
               ),
-            ),
-            title: SizedBox(
-              height: kToolbarHeight,
-              child: tabBarWidget,
-            ),
-            titleSpacing: 0,
-            actions: [
-              IconButton(icon: const Icon(Icons.search), onPressed: () => context.go('/search')),
-              IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () {
-                    context.go('/add_post');
-                  }),
-            ],
-          );
-          return Stack(
-            children: [
-              tabBarView,
-              Scaffold(
-                backgroundColor: Colors.transparent,
-                appBar: appBar,
-                body: null,
+              title: SizedBox(
+                height: kToolbarHeight,
+                child: tabBarWidget,
               ),
-            ],
+              titleSpacing: 0,
+              actions: [
+                IconButton(icon: const Icon(Icons.search), onPressed: () => context.go('/search')),
+                IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () {
+                      context.go('/add_post');
+                    }),
+              ],
+            ),
+            body: tabBarView,
           );
         } else {
           final String currentTitle = (_mainTabController.index < 2)
