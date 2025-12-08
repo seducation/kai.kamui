@@ -174,12 +174,22 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
           return null;
         }
 
+        PostType type = PostType.text;
+        String? mediaUrl;
+        final fileIds = row.data['file_ids'] as List?;
+        if (fileIds != null && fileIds.isNotEmpty) {
+          type = PostType.image;
+          mediaUrl = _appwriteService.getFileViewUrl(fileIds.first);
+        }
+
         return Post(
           id: row.$id,
           author: author,
           timestamp: DateTime.tryParse(row.data['timestamp'] ?? '') ?? DateTime.now(),
+          linkTitle: row.data['titles'] as String? ?? '',
           contentText: row.data['caption'] as String? ?? '',
-          type: PostType.text, // Defaulting to text, as type is not in the data model
+          type: type,
+          mediaUrl: mediaUrl,
           stats: PostStats(), // Defaulting to empty stats
         );
       }).whereType<Post>().toList();

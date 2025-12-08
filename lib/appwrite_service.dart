@@ -296,6 +296,16 @@ class AppwriteService {
     );
   }
 
+  Future<models.RowList> getPostsFromUsers(List<dynamic> profileIds) async {
+    return _db.listRows(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: postsCollection,
+      queries: [
+        Query.equal('profile_id', profileIds),
+      ],
+    );
+  }
+
   Future<void> createPost(Map<String, dynamic> postData) async {
     final profile = await getProfile(postData['profile_id']);
     final ownerId = profile.data['ownerId'];
@@ -352,14 +362,30 @@ class AppwriteService {
   }
 
   Future<models.File> uploadFile({required Uint8List bytes, required String filename}) async {
+    final user = await getUser();
+    if (user == null) {
+      throw AppwriteException('User not authenticated', 401);
+    }
     final result = await _storage.createFile(
       bucketId: Environment.appwriteStorageBucketId,
       fileId: ID.unique(),
       file: InputFile.fromBytes(bytes: bytes, filename: filename),
+      permissions: [
+        Permission.read(Role.any()),
+        Permission.update(Role.user(user.$id)),
+        Permission.delete(Role.user(user.$id)),
+      ]
     );
     return result;
   }
   
+  String getFileViewUrl(String fileId) {
+    return _storage.getFileView(
+      bucketId: Environment.appwriteStorageBucketId,
+      fileId: fileId,
+    ).toString();
+  }
+
   Future<models.RowList> searchPosts({required String query}) async {
     final results = await Future.wait([
       _db.listRows(
