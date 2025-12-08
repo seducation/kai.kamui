@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/appwrite_service.dart';
+import 'package:my_app/search_screen.dart';
 import 'package:provider/provider.dart';
 import './profile_page.dart';
 import 'dart:math';
@@ -207,10 +208,28 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('HMV'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _buildFeed(),
+    );
+  }
 
+  Widget _buildFeed() {
     final shortsPosts = _posts.where((p) => p.type == PostType.image).toList();
 
     // Create a list of widgets to display in the ListView
@@ -231,18 +250,15 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
       feedItems.addAll(_posts.skip(1).map((post) => PostWidget(post: post, allPosts: _posts)));
     }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: ListView.separated(
-        itemCount: feedItems.length,
-        separatorBuilder: (context, index) {
-          // Add a divider between all items
-          return const Divider(height: 1, color: Color(0xFFE0E0E0));
-        },
-        itemBuilder: (context, index) {
-          return feedItems[index];
-        },
-      ),
+    return ListView.separated(
+      itemCount: feedItems.length,
+      separatorBuilder: (context, index) {
+        // Add a divider between all items
+        return const Divider(height: 1, color: Color(0xFFE0E0E0));
+      },
+      itemBuilder: (context, index) {
+        return feedItems[index];
+      },
     );
   }
 

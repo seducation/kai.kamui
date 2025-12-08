@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/appwrite_service.dart';
+import 'package:my_app/search_service.dart';
+import 'package:provider/provider.dart';
 import 'package:my_app/srv_aimode_tabscreen.dart';
 import 'package:my_app/srv_app_tabscreen.dart';
 import 'package:my_app/srv_chats_tabscreen.dart';
@@ -10,6 +13,7 @@ import 'package:my_app/srv_music_tabscreen.dart';
 import 'package:my_app/srv_photos_tabscreen.dart';
 import 'package:my_app/srv_searchtools_tabscreen.dart';
 import 'package:my_app/srv_videos_tabscreen.dart';
+import 'package:go_router/go_router.dart';
 
 class ResultsSearches extends StatefulWidget {
   final String query;
@@ -23,7 +27,10 @@ class ResultsSearches extends StatefulWidget {
 class _ResultsSearchesState extends State<ResultsSearches> with TickerProviderStateMixin {
   late TextEditingController _searchController;
   late TabController _mainTabController;
-  String _currentQuery = '';
+  late final SearchService _searchService;
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isLoading = true;
+  String _error = '';
 
   final List<String> _tabs = [
     'ai mode',
@@ -39,26 +46,13 @@ class _ResultsSearchesState extends State<ResultsSearches> with TickerProviderSt
     'videos',
   ];
 
-  final List<Widget> _tabScreens = [
-    const SrvAimodeTabscreen(),
-    const SrvFeatureTabscreen(),
-    const SrvAppTabscreen(),
-    const SrvFilesTabscreen(),
-    const SrvFollowingTabscreen(),
-    const SrvForumTabscreen(),
-    const SrvMusicTabscreen(),
-    const SrvPhotosTabscreen(),
-    const SrvChatsTabscreen(),
-    const SrvSearchtoolsTabscreen(),
-    const SrvVideosTabscreen(),
-  ];
-
   @override
   void initState() {
     super.initState();
-    _currentQuery = widget.query;
-    _searchController = TextEditingController(text: _currentQuery);
+    _searchController = TextEditingController(text: widget.query);
     _mainTabController = TabController(length: _tabs.length, vsync: this);
+    _searchService = SearchService(context.read<AppwriteService>());
+    _performSearch();
   }
 
   @override
@@ -68,10 +62,29 @@ class _ResultsSearchesState extends State<ResultsSearches> with TickerProviderSt
     super.dispose();
   }
 
-  void _updateSearchQuery(String newQuery) {
+  Future<void> _performSearch() async {
     setState(() {
-      _currentQuery = newQuery;
+      _isLoading = true;
+      _error = '';
     });
+    try {
+      final results = await _searchService.search(widget.query);
+      setState(() {
+        _searchResults = results;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Error: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _updateSearchQuery(String newQuery) {
+    if (newQuery.isNotEmpty) {
+      context.go('/search/$newQuery');
+    }
   }
 
   @override
@@ -90,9 +103,6 @@ class _ResultsSearchesState extends State<ResultsSearches> with TickerProviderSt
           decoration: const InputDecoration.collapsed(
             hintText: 'Search',
           ),
-          onChanged: (value) {
-            setState(() {});
-          },
           onSubmitted: _updateSearchQuery,
         ),
         actions: [
@@ -111,10 +121,32 @@ class _ResultsSearchesState extends State<ResultsSearches> with TickerProviderSt
           tabs: _tabs.map((String name) => Tab(text: name)).toList(),
         ),
       ),
-      body: TabBarView(
-        controller: _mainTabController,
-        children: _tabScreens,
-      ),
+      body: _buildBody(),
     );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    } else if (_error.isNotEmpty) {
+      return Center(child: Text(_error));
+    } else {
+      return TabBarView(
+        controller: _mainTabController,
+        children: [
+          const SrvAimodeTabscreen(),
+          SrvFeatureTabscreen(searchResults: _searchResults),
+          const SrvAppTabscreen(),
+          const SrvFilesTabscreen(),
+          const SrvFollowingTabscreen(),
+          const SrvForumTabscreen(),
+          const SrvMusicTabscreen(),
+          const SrvPhotosTabscreen(),
+          const SrvChatsTabscreen(),
+          const SrvSearchtoolsTabscreen(),
+          const SrvVideosTabscreen(),
+        ],
+      );
+    }
   }
 }

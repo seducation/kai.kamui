@@ -115,11 +115,30 @@ class AppwriteService {
     );
   }
 
-  Future<models.RowList> searchProfiles({required String name}) async {
-    return _db.listRows(
-      databaseId: Environment.appwriteDatabaseId,
-      tableId: profilesCollection,
-      queries: [Query.search('name', name)],
+  Future<models.RowList> searchProfiles({required String query}) async {
+    final results = await Future.wait([
+      _db.listRows(
+        databaseId: Environment.appwriteDatabaseId,
+        tableId: profilesCollection,
+        queries: [Query.search('name', query)],
+      ),
+      _db.listRows(
+        databaseId: Environment.appwriteDatabaseId,
+        tableId: profilesCollection,
+        queries: [Query.search('bio', query)],
+      ),
+    ]);
+
+    final allProfiles = <String, models.Row>{};
+    for (final result in results) {
+      for (final doc in result.rows) {
+        allProfiles[doc.$id] = doc;
+      }
+    }
+
+    return models.RowList(
+      total: allProfiles.length,
+      rows: allProfiles.values.toList(),
     );
   }
 
@@ -339,5 +358,37 @@ class AppwriteService {
       file: InputFile.fromBytes(bytes: bytes, filename: filename),
     );
     return result;
+  }
+  
+  Future<models.RowList> searchPosts({required String query}) async {
+    final results = await Future.wait([
+      _db.listRows(
+        databaseId: Environment.appwriteDatabaseId,
+        tableId: postsCollection,
+        queries: [Query.search('caption', query)],
+      ),
+      _db.listRows(
+        databaseId: Environment.appwriteDatabaseId,
+        tableId: postsCollection,
+        queries: [Query.search('titles', query)],
+      ),
+      _db.listRows(
+        databaseId: Environment.appwriteDatabaseId,
+        tableId: postsCollection,
+        queries: [Query.search('tags', query)],
+      ),
+    ]);
+
+    final allPosts = <String, models.Row>{};
+    for (final result in results) {
+      for (final doc in result.rows) {
+        allPosts[doc.$id] = doc;
+      }
+    }
+    
+    return models.RowList(
+      total: allPosts.length,
+      rows: allPosts.values.toList(),
+    );
   }
 }

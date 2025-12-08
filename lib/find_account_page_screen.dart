@@ -85,7 +85,7 @@ class _FindAccountPageScreenState extends State<FindAccountPageScreen> {
     }
 
     try {
-      final models.RowList result = await _appwriteService.searchProfiles(name: query);
+      final models.RowList result = await _appwriteService.searchProfiles(query: query);
       // Get the profile ID of the current user to exclude it
       final userProfiles = await _appwriteService.getUserProfiles(ownerId: _currentUser!.$id);
       final selfProfileId = userProfiles.rows.isNotEmpty ? userProfiles.rows.first.$id : null;
