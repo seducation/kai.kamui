@@ -15,17 +15,22 @@ class CommentsScreen extends StatefulWidget {
 }
 
 class _Comment {
+  final String id;
   final String text;
   final Profile? author;
   final String profileId;
   final DateTime timestamp;
+  final String? parentCommentId;
+  List<_Comment> replies;
 
   _Comment({
+    required this.id,
     required this.text,
     this.author,
     required this.profileId,
     required this.timestamp,
-  });
+    this.parentCommentId,
+  }) : replies = [];
 }
 
 class _CommentsScreenState extends State<CommentsScreen> {
@@ -33,6 +38,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
   List<_Comment> _comments = [];
   final TextEditingController _commentController = TextEditingController();
   bool _isLoading = true;
+  String? _replyingToCommentId;
 
   @override
   void initState() {
@@ -51,22 +57,36 @@ class _CommentsScreenState extends State<CommentsScreen> {
         for (var p in profilesResponse.rows) p.$id: Profile.fromMap(p.data, p.$id)
       };
 
-      final comments = commentsResponse.rows.map((row) {
+      final allComments = commentsResponse.rows.map((row) {
         final profileId = row.data['profile_id'] as String;
         final author = profilesMap[profileId];
 
         return _Comment(
+          id: row.$id,
           text: row.data['text'] as String? ?? '',
           author: author,
           profileId: profileId,
           timestamp:
               DateTime.tryParse(row.data['timestamp'] ?? '') ?? DateTime.now(),
+          parentCommentId: row.data['parent_comment_id'] as String?,
         );
       }).toList();
 
+      final commentMap = {for (var c in allComments) c.id: c};
+      final nestedComments = <_Comment>[];
+
+      for (final comment in allComments) {
+        if (comment.parentCommentId != null &&
+            commentMap.containsKey(comment.parentCommentId)) {
+          commentMap[comment.parentCommentId]!.replies.add(comment);
+        } else {
+          nestedComments.add(comment);
+        }
+      }
+
       if (mounted) {
         setState(() {
-          _comments = comments;
+          _comments = nestedComments;
           _isLoading = false;
         });
       }
@@ -80,7 +100,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
     }
   }
 
-  Future<void> _addComment() async {
+  Future<void> _addComment({String? parentCommentId}) async {
     if (_commentController.text.isEmpty) {
       return;
     }
@@ -114,11 +134,16 @@ class _CommentsScreenState extends State<CommentsScreen> {
         postId: widget.post.id,
         profileId: profileId,
         text: _commentController.text,
+        parentCommentId: parentCommentId,
       );
       _commentController.clear();
+      setState(() {
+        _replyingToCommentId = null;
+      });
       await _fetchComments(); // Refresh comments
     } catch (e) {
       if (!mounted) return;
+      debugPrint('Error adding comment: $e');
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Failed to add comment. Please try again.'),
       ));
@@ -154,15 +179,23 @@ class _CommentsScreenState extends State<CommentsScreen> {
     return ListView.builder(
       itemCount: _comments.length,
       itemBuilder: (context, index) {
-        final comment = _comments[index];
-        final author = comment.author;
-        final isValidUrl = author?.profileImageUrl != null &&
-            (author!.profileImageUrl!.startsWith('http') ||
-                author.profileImageUrl!.startsWith('https'));
+        return _buildCommentItem(_comments[index]);
+      },
+    );
+  }
 
-        return Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
+  Widget _buildCommentItem(_Comment comment, {int depth = 0}) {
+    final author = comment.author;
+    final isValidUrl = author?.profileImageUrl != null &&
+        (author!.profileImageUrl!.startsWith('http') ||
+            author.profileImageUrl!.startsWith('https'));
+
+    return Padding(
+      padding: EdgeInsets.only(left: depth * 16.0, top: 8.0, right: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (isValidUrl)
@@ -184,32 +217,61 @@ class _CommentsScreenState extends State<CommentsScreen> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text(comment.text),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _replyingToCommentId = comment.id;
+                        });
+                      },
+                      child: const Text('Reply'),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-        );
-      },
+          ...comment.replies.map((reply) => _buildCommentItem(reply, depth: depth + 1)),
+        ],
+      ),
     );
   }
 
   Widget _buildCommentInputField() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: TextField(
-              controller: _commentController,
-              decoration: const InputDecoration(
-                hintText: 'Add a comment...',
-              ),
+          if (_replyingToCommentId != null)
+            Row(
+              children: [
+                Text('Replying to comment...'),
+                IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      _replyingToCommentId = null;
+                    });
+                  },
+                )
+              ],
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: _addComment,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _commentController,
+                  decoration: InputDecoration(
+                    hintText: _replyingToCommentId == null
+                        ? 'Add a comment...'
+                        : 'Add a reply...',
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send),
+                onPressed: () => _addComment(parentCommentId: _replyingToCommentId),
+              ),
+            ],
           ),
         ],
       ),

@@ -354,6 +354,7 @@ class AppwriteService {
     required String postId,
     required String profileId,
     required String text,
+    String? parentCommentId,
   }) async {
     final profile = await getProfile(profileId);
     final ownerId = profile.data['ownerId'];
@@ -361,16 +362,19 @@ class AppwriteService {
       throw AppwriteException('Could not determine the owner of the profile.', 403);
     }
 
+    final data = {
+      'post_id': postId,
+      'profile_id': profileId,
+      'text': text,
+      'timestamp': DateTime.now().toIso8601String(),
+      if (parentCommentId != null) 'parent_comment_id': parentCommentId,
+    };
+
     await _db.createRow(
       databaseId: Environment.appwriteDatabaseId,
       tableId: commentsCollection,
       rowId: ID.unique(),
-      data: {
-        'post_id': postId,
-        'profile_id': profileId,
-        'text': text,
-        'timestamp': DateTime.now().toIso8601String(),
-      },
+      data: data,
       permissions: [
         Permission.read(Role.any()),
         Permission.update(Role.user(ownerId)),
