@@ -327,6 +327,17 @@ class AppwriteService {
     );
   }
 
+  Future<void> updatePostLikes(String postId, int likes) async {
+    await _db.updateRow(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: postsCollection,
+      rowId: postId,
+      data: {
+        'likes': likes,
+      },
+    );
+  }
+
   Future<models.RowList> getImages({String? cursor}) async {
     return await _db.listRows(
       databaseId: Environment.appwriteDatabaseId,

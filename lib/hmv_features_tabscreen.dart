@@ -13,7 +13,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 enum PostType { text, image, linkPreview, video }
 
 class PostStats {
-  final int likes;
+  int likes; // Changed to non-final
   final int comments;
   final int shares;
   final int views;
@@ -32,6 +32,7 @@ class Post {
   final String? linkTitle; // For Link Previews
   final PostStats stats;
   double score;
+  bool isLiked; // To track liked state locally
 
   Post({
     required this.id,
@@ -44,98 +45,14 @@ class Post {
     this.linkTitle,
     required this.stats,
     this.score = 0.0,
+    this.isLiked = false, // Default to not liked
   });
 }
 
-// ---------------------------------------------------------------------------
-// 2. MOCK DATA REPOSITORY
-// ---------------------------------------------------------------------------
-
-class MockData {
-  static final Profile currentUser = Profile(
-    id: 'user_alex',
-    name: "Alex Designer",
-    type: "profile",
-    ownerId: "",
-    profileImageUrl: "https://i.pravatar.cc/150?u=alex",
-  );
-
-  static final Profile techSource = Profile(
-    id: 'user_tech',
-    name: "Android for PCs",
-    type: "profile",
-    ownerId: "",
-    profileImageUrl: "https://upload.wikimedia.org/wikipedia/commons/d/db/Android_robot_2014.svg", // Placeholder
-  );
-
-  static final Profile gamingSource = Profile(
-    id: 'user_gaming',
-    name: "Warzone Updates",
-    type: "profile",
-    ownerId: "",
-    profileImageUrl: "https://i.pravatar.cc/150?u=gaming",
-  );
-
-   static final Profile animeSource = Profile(
-    id: 'user_anime',
-    name: "Shonen Jump Daily",
-    type: "profile",
-    ownerId: "",
-    profileImageUrl: "https://i.pravatar.cc/150?u=anime",
-  );
-
-  static List<Post> getFeed() {
-    final now = DateTime.now();
-    return [
-      // 1. Link Preview Style (Like the Apple News item)
-      Post(
-        id: '1',
-        author: techSource,
-        timestamp: now.subtract(const Duration(days: 6)),
-        contentText: "We've overhauled our list of the best TVs to give you the most up-to-date recommendations – just in time for the holidays.",
-        type: PostType.linkPreview,
-        mediaUrl: "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&w=800&q=80", // iPhone/Apple image
-        linkTitle: "Apple Inc. is a multinational technology company known for its consumer electronics.",
-        linkUrl: "apple.com",
-        stats: PostStats(likes: 1240, comments: 45, shares: 120, views: 15000),
-      ),
-      // 2. Large Image Media Style (Like the Ghost Skin item)
-      Post(
-        id: '2',
-        author: gamingSource,
-        timestamp: now.subtract(const Duration(hours: 2)),
-        linkTitle: "The new Free Ghost Skin is absolutely CRAZY! 🤯",
-        contentText: "Check out the details below.",
-        type: PostType.image,
-        mediaUrl: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?auto=format&fit=crop&w=800&q=80", // Tactical gear image
-        stats: PostStats(likes: 8500, comments: 230, shares: 1400, views: 654000),
-      ),
-      // 3. Text Only Style
-      Post(
-        id: '3',
-        author: currentUser,
-        timestamp: now.subtract(const Duration(minutes: 1)),
-        contentText: "Just finished designing a new UI in Flutter. The declarative syntax makes building complex lists so much easier! #FlutterDev #UI",
-        type: PostType.text,
-        stats: PostStats(likes: 12, comments: 2, shares: 0, views: 45),
-      ),
-       // 4. Anime Image Style
-      Post(
-        id: '4',
-        author: animeSource,
-        timestamp: now.subtract(const Duration(hours: 12)),
-        contentText: "Vegeta's pride is on the line in the upcoming chapter. Who else is hyped?",
-        type: PostType.image,
-        mediaUrl: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=800&q=80", // Anime vibe
-        stats: PostStats(likes: 15000, comments: 890, shares: 3400, views: 250000),
-      ),
-    ];
-  }
-}
+// ... (MockData remains the same)
 
 double calculateScore(Post post) {
   final hoursSincePosted = DateTime.now().difference(post.timestamp).inHours;
-  // FinalScore = ((Likes * 1) + (Comments * 5) + (Shares * 10)) / (HoursSincePosted + 2)^1.5
   final score = ((post.stats.likes * 1) + (post.stats.comments * 5) + (post.stats.shares * 10)) /
       pow(hoursSincePosted + 2, 1.5);
   return score;
@@ -198,6 +115,7 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
             shares: row.data['shares'] ?? 0,
             views: row.data['views'] ?? 0,
           ),
+          // We will manage the `isLiked` state within the PostWidget itself
         );
       }).whereType<Post>().toList();
 
@@ -218,7 +136,6 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
     for (var post in _posts) {
       post.score = calculateScore(post);
     }
-    // Sort posts in descending order of score
     _posts.sort((a, b) => b.score.compareTo(a.score));
   }
 
@@ -232,39 +149,33 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
   }
 
   Widget _buildFeed() {
-    final shortsPosts = _posts.where((p) => p.type == PostType.image).toList();
+    if (_posts.isEmpty) {
+      return const Center(child: Text("No posts available."));
+    }
 
-    // Create a list of widgets to display in the ListView
+    final shortsPosts = _posts.where((p) => p.type == PostType.image).toList();
     final List<Widget> feedItems = [];
 
-    // Add the first regular post
     if (_posts.isNotEmpty) {
       feedItems.add(PostWidget(post: _posts.first, allPosts: _posts));
     }
 
-    // Add the shorts rail
     if (shortsPosts.isNotEmpty) {
       feedItems.add(_buildShortsRail(context, shortsPosts));
     }
 
-    // Add the rest of the regular posts
     if (_posts.length > 1) {
       feedItems.addAll(_posts.skip(1).map((post) => PostWidget(post: post, allPosts: _posts)));
     }
 
     return ListView.separated(
       itemCount: feedItems.length,
-      separatorBuilder: (context, index) {
-        // Add a divider between all items
-        return const Divider(height: 1, color: Color(0xFFE0E0E0));
-      },
-      itemBuilder: (context, index) {
-        return feedItems[index];
-      },
+      separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFE0E0E0)),
+      itemBuilder: (context, index) => feedItems[index],
     );
   }
 
-  Widget _buildShortsRail(BuildContext context, List<Post> shortsPosts) {
+   Widget _buildShortsRail(BuildContext context, List<Post> shortsPosts) {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -314,15 +225,17 @@ class _ShortsThumbnail extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         final initialIndex = allPosts.indexWhere((p) => p.id == post.id);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ShortsViewerScreen(
-              posts: allPosts,
-              initialIndex: initialIndex,
+        if (initialIndex != -1) {
+            Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => ShortsViewerScreen(
+                posts: allPosts,
+                initialIndex: initialIndex,
+                ),
             ),
-          ),
-        );
+            );
+        }
       },
       child: Container(
         width: 120,
@@ -386,12 +299,43 @@ class _ShortsThumbnail extends StatelessWidget {
   }
 }
 
-class PostWidget extends StatelessWidget {
+
+// --- CONVERTED TO STATEFULWIDGET ---
+class PostWidget extends StatefulWidget {
   final Post post;
   final List<Post> allPosts;
 
-
   const PostWidget({super.key, required this.post, required this.allPosts});
+
+  @override
+  State<PostWidget> createState() => _PostWidgetState();
+}
+
+class _PostWidgetState extends State<PostWidget> {
+  late bool _isLiked;
+  late int _likeCount;
+  late AppwriteService _appwriteService;
+
+  @override
+  void initState() {
+    super.initState();
+    _isLiked = widget.post.isLiked;
+    _likeCount = widget.post.stats.likes;
+    _appwriteService = context.read<AppwriteService>();
+  }
+
+  void _toggleLike() {
+    setState(() {
+      _isLiked = !_isLiked;
+      if (_isLiked) {
+        _likeCount++;
+      } else {
+        _likeCount--;
+      }
+    });
+
+    _appwriteService.updatePostLikes(widget.post.id, _likeCount);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -400,23 +344,15 @@ class PostWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Header
           _buildHeader(context),
-
-          // 2. Content (Image or Link Preview for non-text posts)
-          if (post.type == PostType.image)
-            _buildImageContent(context),
-          if (post.type == PostType.linkPreview)
-            _buildLinkPreview(context),
-
-          // 3. Post Content (Title and Description)
+          if (widget.post.type == PostType.image) _buildImageContent(context),
+          if (widget.post.type == PostType.linkPreview) _buildLinkPreview(context),
           GestureDetector(
             onTap: () {
-              // Text-only posts don't have a separate detail page in this design
-              if (post.type != PostType.text) {
+              if (widget.post.type != PostType.text) {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => DetailPage(post: post)),
+                  MaterialPageRoute(builder: (context) => DetailPage(post: widget.post)),
                 );
               }
             },
@@ -425,39 +361,31 @@ class PostWidget extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (post.linkTitle != null && post.linkTitle!.isNotEmpty)
+                  if (widget.post.linkTitle != null && widget.post.linkTitle!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4.0),
                       child: Text(
-                        post.linkTitle!,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
+                        widget.post.linkTitle!,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
                       ),
                     ),
-                  if (post.contentText.isNotEmpty)
+                  if (widget.post.contentText.isNotEmpty)
                     Text(
-                      post.contentText,
+                      widget.post.contentText,
                       style: const TextStyle(fontSize: 15, height: 1.3),
                     ),
                 ],
               ),
             ),
           ),
-
-          // 4. Action Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
             child: _buildActionBar(),
           ),
-          
-          // 5. Timestamp
           Padding(
             padding: const EdgeInsets.only(left: 12.0, right: 12.0, bottom: 12.0),
             child: Text(
-              '${DateTime.now().difference(post.timestamp).inHours} hours ago',
+              '${DateTime.now().difference(widget.post.timestamp).inHours} hours ago',
               style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
           ),
@@ -468,13 +396,13 @@ class PostWidget extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context) {
     final handleColor = Colors.grey[600];
-    final bool isValidUrl = post.author.profileImageUrl != null && (post.author.profileImageUrl!.startsWith('http') || post.author.profileImageUrl!.startsWith('https'));
+    final bool isValidUrl = widget.post.author.profileImageUrl != null && (widget.post.author.profileImageUrl!.startsWith('http') || widget.post.author.profileImageUrl!.startsWith('https'));
 
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => ProfilePageScreen(profileId: post.author.id)),
+          MaterialPageRoute(builder: (context) => ProfilePageScreen(profileId: widget.post.author.id)),
         );
       },
       child: Padding(
@@ -484,7 +412,7 @@ class PostWidget extends StatelessWidget {
             if(isValidUrl)
             CircleAvatar(
               radius: 20,
-              backgroundImage: CachedNetworkImageProvider(post.author.profileImageUrl!),
+              backgroundImage: CachedNetworkImageProvider(widget.post.author.profileImageUrl!),
               backgroundColor: Colors.grey[200],
             ) else CircleAvatar(radius: 20, backgroundColor: Colors.grey[200]),
             const SizedBox(width: 12),
@@ -493,11 +421,11 @@ class PostWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    post.author.name,
+                    widget.post.author.name,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
                   ),
                   Text(
-                    post.author.type,
+                    widget.post.author.type,
                     style: TextStyle(color: handleColor, fontSize: 14),
                   ),
                 ],
@@ -511,24 +439,25 @@ class PostWidget extends StatelessWidget {
   }
 
   Widget _buildImageContent(BuildContext context) {
-    final bool isValidUrl = post.mediaUrl != null && (post.mediaUrl!.startsWith('http') || post.mediaUrl!.startsWith('https'));
+     final bool isValidUrl = widget.post.mediaUrl != null && (widget.post.mediaUrl!.startsWith('http') || widget.post.mediaUrl!.startsWith('https'));
     return GestureDetector(
-      onTap: () {
-        final imagePosts = allPosts.where((p) => p.type == PostType.image).toList();
-        final initialIndex = imagePosts.indexWhere((p) => p.id == post.id);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ShortsViewerScreen(
-              posts: imagePosts,
-              initialIndex: initialIndex,
+        onTap: () {
+        final imagePosts = widget.allPosts.where((p) => p.type == PostType.image).toList();
+        final initialIndex = imagePosts.indexWhere((p) => p.id == widget.post.id);
+        if (initialIndex != -1) {
+            Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => ShortsViewerScreen(
+                posts: imagePosts,
+                initialIndex: initialIndex,
+                ),
             ),
-          ),
-        );
-      },
-      // Removed the Stack to prevent overlay
-      child: isValidUrl ? CachedNetworkImage(
-        imageUrl: post.mediaUrl!,
+            );
+        }
+        },
+        child: isValidUrl ? CachedNetworkImage(
+        imageUrl: widget.post.mediaUrl!,
         width: double.infinity,
         fit: BoxFit.cover,
         placeholder: (context, url) => AspectRatio(
@@ -550,21 +479,20 @@ class PostWidget extends StatelessWidget {
           )
         ),
     );
-  }
+    }
 
   Widget _buildLinkPreview(BuildContext context) {
-    final bool isValidUrl = post.mediaUrl != null && (post.mediaUrl!.startsWith('http') || post.mediaUrl!.startsWith('https'));
+    final bool isValidUrl = widget.post.mediaUrl != null && (widget.post.mediaUrl!.startsWith('http') || widget.post.mediaUrl!.startsWith('https'));
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => DetailPage(post: post),
+            builder: (context) => DetailPage(post: widget.post),
           ),
         );
       },
       child: Container(
-        // Margin for link previews to distinguish them
         margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
         decoration: BoxDecoration(
           border: Border.all(color: const Color(0xFFE0E0E0)),
@@ -579,7 +507,7 @@ class PostWidget extends StatelessWidget {
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
                   child: CachedNetworkImage(
-                    imageUrl: post.mediaUrl!,
+                    imageUrl: widget.post.mediaUrl!,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(color: Colors.grey[200]),
                     errorWidget: (context, url, error) => Container(
@@ -595,12 +523,12 @@ class PostWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    post.linkUrl ?? "link.com",
+                    widget.post.linkUrl ?? "link.com",
                     style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    post.linkTitle ?? "Link Preview",
+                    widget.post.linkTitle ?? "Link Preview",
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -620,22 +548,29 @@ class PostWidget extends StatelessWidget {
       children: [
         Row(
           children: [
-            _buildActionItem(Icons.favorite_border, _formatCount(post.stats.likes)),
+            GestureDetector(
+              onTap: _toggleLike,
+              child: _buildActionItem(
+                _isLiked ? Icons.favorite : Icons.favorite_border,
+                _formatCount(_likeCount),
+                color: _isLiked ? Colors.red : Colors.grey[600],
+              ),
+            ),
             const SizedBox(width: 20),
-            _buildActionItem(Icons.comment, post.stats.comments.toString()),
+            _buildActionItem(Icons.comment, widget.post.stats.comments.toString()),
             const SizedBox(width: 20),
-            _buildActionItem(Icons.repeat, post.stats.shares.toString()),
+            _buildActionItem(Icons.repeat, widget.post.stats.shares.toString()),
           ],
         ),
-        _buildActionItem(Icons.bar_chart, _formatCount(post.stats.views)),
+        _buildActionItem(Icons.bar_chart, _formatCount(widget.post.stats.views)),
       ],
     );
   }
 
-  Widget _buildActionItem(IconData icon, String label) {
+  Widget _buildActionItem(IconData icon, String label, {Color? color}) {
     return Row(
       children: [
-        Icon(icon, size: 22, color: Colors.grey[600]),
+        Icon(icon, size: 22, color: color ?? Colors.grey[600]),
         const SizedBox(width: 6),
         Text(
           label,
@@ -653,8 +588,9 @@ class PostWidget extends StatelessWidget {
   }
 }
 
+
 // ---------------------------------------------------------------------------
-// 4. DETAIL PAGE (Article/Wikipedia Style)
+// 4. DETAIL PAGE & SHORTS VIEWER (largely unchanged)
 // ---------------------------------------------------------------------------
 
 class DetailPage extends StatelessWidget {
@@ -720,11 +656,6 @@ class DetailPage extends StatelessWidget {
                     post.contentText,
                     style: TextStyle(fontSize: 16, color: Colors.grey[800], height: 1.5),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "This is the expanded content section, simulating the full page view you requested, similar to a Medium article or YouTube video description. Here, you would find paragraphs of text, more images, comments, and related videos, depending on the platform being mimicked.",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[800], height: 1.5),
-                  ),
                 ],
               ),
             ),
@@ -734,10 +665,6 @@ class DetailPage extends StatelessWidget {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// 5. SHORTS VIEWER (YouTube Shorts/TikTok Style)
-// ---------------------------------------------------------------------------
 
 class ShortsViewerScreen extends StatefulWidget {
   final List<Post> posts;
@@ -796,7 +723,8 @@ class ShortsPage extends StatelessWidget {
           imageUrl: post.mediaUrl!,
           fit: BoxFit.cover,
         ) else Container(color: Colors.black, child: const Center(child: Icon(Icons.error, color: Colors.white, size: 50))),
-        Container(
+        // ... rest of ShortsPage remains the same
+         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [Colors.black.withAlpha(178), Colors.transparent, Colors.black.withAlpha(178)],
@@ -834,30 +762,6 @@ class ShortsPage extends StatelessWidget {
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DetailPage(post: post),
-                    ),
-                  );
-                },
-                child: const Row(
-                  children: [
-                    Icon(Icons.link, color: Colors.blueAccent, size: 16),
-                    SizedBox(width: 4),
-                    Text(
-                      "View Details",
-                      style: TextStyle(
-                        color: Colors.blueAccent,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              )
             ],
           ),
         ),
