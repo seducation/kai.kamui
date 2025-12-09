@@ -15,8 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum PostType { text, image, linkPreview, video }
 
 class PostStats {
-  int likes; // Changed to non-final
-  final int comments;
+  int likes;
+  int comments;
   final int shares;
   final int views;
 
@@ -316,6 +316,7 @@ class PostWidget extends StatefulWidget {
 class _PostWidgetState extends State<PostWidget> {
   late bool _isLiked;
   late int _likeCount;
+  int _commentCount = 0;
   late AppwriteService _appwriteService;
   SharedPreferences? _prefs;
 
@@ -323,15 +324,31 @@ class _PostWidgetState extends State<PostWidget> {
   void initState() {
     super.initState();
     _appwriteService = context.read<AppwriteService>();
+    _isLiked = false;
+    _likeCount = widget.post.stats.likes;
+    _commentCount = widget.post.stats.comments;
     _initializeState();
   }
 
   Future<void> _initializeState() async {
     _prefs = await SharedPreferences.getInstance();
+    _fetchCommentCount();
     setState(() {
       _isLiked = _prefs?.getBool(widget.post.id) ?? false;
-      _likeCount = widget.post.stats.likes;
     });
+  }
+
+  Future<void> _fetchCommentCount() async {
+    try {
+      final comments = await _appwriteService.getComments(widget.post.id);
+      if (mounted) {
+        setState(() {
+          _commentCount = comments.total;
+        });
+      }
+    } catch (e) {
+      // Handle error
+    }
   }
 
   Future<void> _toggleLike() async {
@@ -384,13 +401,17 @@ class _PostWidgetState extends State<PostWidget> {
     }
   }
 
-  void _openComments() {
-    Navigator.push(
+  void _openComments() async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CommentsScreen(post: widget.post),
       ),
     );
+
+    if (result == true) {
+      _fetchCommentCount();
+    }
   }
 
   @override
@@ -618,7 +639,7 @@ class _PostWidgetState extends State<PostWidget> {
             const SizedBox(width: 20),
             GestureDetector(
               onTap: _openComments,
-              child: _buildActionItem(Icons.comment, widget.post.stats.comments.toString()),
+              child: _buildActionItem(Icons.comment, _commentCount.toString()),
             ),
             const SizedBox(width: 20),
             _buildActionItem(Icons.repeat, widget.post.stats.shares.toString()),
