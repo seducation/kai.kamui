@@ -37,8 +37,7 @@ Future<void> main() async {
 
   final Client client = Client()
     ..setEndpoint(Environment.appwritePublicEndpoint)
-    ..setProject(Environment.appwriteProjectId)
-    ..setSelfSigned(status: true); // This is the line I added
+    ..setProject(Environment.appwriteProjectId);
 
   final authService = AuthService(client);
   await authService.init();
