@@ -95,6 +95,7 @@ class AppwriteService {
         'profileImageUrl': profileImageUrl,
         'bannerImageUrl': bannerImageUrl,
         'followers': [],
+        'savedPosts': [],
       },
       permissions: [
         Permission.read(Role.any()),
@@ -192,6 +193,38 @@ class AppwriteService {
       return await updateProfile(
         profileId: profileId,
         data: {'followers': followers},
+      );
+    }
+    return profile;
+  }
+
+  Future<models.Row> savePost({
+    required String profileId,
+    required String postId,
+  }) async {
+    final profile = await getProfile(profileId);
+    final List<String> savedPosts = List<String>.from(profile.data['savedPosts'] ?? []);
+    if (!savedPosts.contains(postId)) {
+      savedPosts.add(postId);
+      return await updateProfile(
+        profileId: profileId,
+        data: {'savedPosts': savedPosts},
+      );
+    }
+    return profile;
+  }
+
+  Future<models.Row> unsavePost({
+    required String profileId,
+    required String postId,
+  }) async {
+    final profile = await getProfile(profileId);
+    final List<String> savedPosts = List<String>.from(profile.data['savedPosts'] ?? []);
+    if (savedPosts.contains(postId)) {
+      savedPosts.remove(postId);
+      return await updateProfile(
+        profileId: profileId,
+        data: {'savedPosts': savedPosts},
       );
     }
     return profile;

@@ -410,12 +410,53 @@ class _PostWidgetState extends State<PostWidget> {
   Future<void> _toggleSaved() async {
     if (_prefs == null) return;
 
+    final user = await _appwriteService.getUser();
+    if (!mounted) return;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('You must be logged in to save posts.'),
+      ));
+      return;
+    }
+
+    final profiles = await _appwriteService.getUserProfiles(ownerId: user.$id);
+    if (!mounted) return;
+
+    final userProfiles = profiles.rows.where((p) => p.data['type'] == 'profile');
+
+    if (userProfiles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('You must have a user profile to save a post.'),
+      ));
+      return;
+    }
+
+    final profileId = userProfiles.first.$id;
     final newSavedState = !_isSaved;
+
     setState(() {
       _isSaved = newSavedState;
     });
 
-    await _prefs!.setBool('saved_${widget.post.id}', newSavedState);
+    try {
+      if (newSavedState) {
+        await _appwriteService.savePost(profileId: profileId, postId: widget.post.id);
+      } else {
+        await _appwriteService.unsavePost(profileId: profileId, postId: widget.post.id);
+      }
+      await _prefs!.setBool('saved_${widget.post.id}', newSavedState);
+    } catch (e) {
+      // Revert the state if the update fails
+      setState(() {
+        _isSaved = !newSavedState;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Failed to update saved status. Please try again.'),
+        ));
+      }
+    }
   }
 
   void _openComments() async {
