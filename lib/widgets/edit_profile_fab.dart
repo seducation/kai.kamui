@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:my_app/appwrite_service.dart';
 import 'package:provider/provider.dart';
 
@@ -34,6 +38,8 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
   final _locationController = TextEditingController();
   String _privacy = 'Public';
   String? _profileId;
+  File? _profileImage;
+  File? _bannerImage;
 
   @override
   void initState() {
@@ -75,6 +81,28 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
     _handleController.dispose();
     _locationController.dispose();
     super.dispose();
+  }
+
+  Future<File?> _pickAndCropImage(ImageSource source) async {
+    final pickedFile = await ImagePicker().pickImage(source: source);
+    if (pickedFile == null) return null;
+
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: pickedFile.path,
+      uiSettings: [
+        AndroidUiSettings(
+            toolbarTitle: 'Cropper',
+            toolbarColor: Colors.deepOrange,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false),
+        IOSUiSettings(
+          title: 'Cropper',
+        ),
+      ],
+    );
+
+    return croppedFile != null ? File(croppedFile.path) : null;
   }
 
   Future<void> _saveSettings() async {
@@ -129,7 +157,27 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                     children: <Widget>[
-                      ChannelHeader(handleController: _handleController),
+                      ChannelHeader(
+                        handleController: _handleController,
+                        onBannerTap: () async {
+                          final image = await _pickAndCropImage(ImageSource.gallery);
+                          if (image != null) {
+                            setState(() {
+                              _bannerImage = image;
+                            });
+                          }
+                        },
+                        onProfileTap: () async {
+                          final image = await _pickAndCropImage(ImageSource.gallery);
+                          if (image != null) {
+                            setState(() {
+                              _profileImage = image;
+                            });
+                          }
+                        },
+                        bannerImage: _bannerImage,
+                        profileImage: _profileImage,
+                      ),
                       const SizedBox(height: 24),
                       CustomTextField(
                         controller: _nameController,
@@ -232,65 +280,49 @@ class _ChannelSettingsDialogState extends State<ChannelSettingsDialog> {
 
 class ChannelHeader extends StatelessWidget {
   final TextEditingController handleController;
-  const ChannelHeader({super.key, required this.handleController});
+  final VoidCallback onBannerTap;
+  final VoidCallback onProfileTap;
+  final File? bannerImage;
+  final File? profileImage;
+
+  const ChannelHeader(
+      {super.key,
+      required this.handleController,
+      required this.onBannerTap,
+      required this.onProfileTap,
+      this.bannerImage,
+      this.profileImage});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Column(
       children: [
-        SizedBox(
-          height: 100,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Center(
-                child: Icon(
-                  Icons.image,
-                  color: (theme.iconTheme.color ?? Colors.black).withAlpha(97),
-                  size: 50,
-                ),
-              ),
-              Positioned(
-                bottom: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withAlpha(128),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.camera_alt,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Row(
-          children: [
-            Stack(
+        GestureDetector(
+          onTap: onBannerTap,
+          child: SizedBox(
+            height: 100,
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20.0),
-                  child: CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.white,
-                    child: ClipOval(
-                      child: const Icon(
-                        Icons.person,
-                        size: 50,
-                      ),
+                if (bannerImage != null)
+                  Image.file(
+                    bannerImage!,
+                    fit: BoxFit.cover,
+                  )
+                else
+                  Center(
+                    child: Icon(
+                      Icons.image,
+                      color: (theme.iconTheme.color ?? Colors.black).withAlpha(97),
+                      size: 50,
                     ),
                   ),
-                ),
                 Positioned(
-                  bottom: 20,
-                  right: 0,
+                  bottom: 8,
+                  right: 8,
                   child: Container(
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: Colors.black.withAlpha(128),
                       shape: BoxShape.circle,
@@ -303,6 +335,49 @@ class ChannelHeader extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+        Row(
+          children: [
+            GestureDetector(
+              onTap: onProfileTap,
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20.0),
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.white,
+                      backgroundImage:
+                          profileImage != null ? FileImage(profileImage!) : null,
+                      child: profileImage == null
+                          ? ClipOval(
+                              child: const Icon(
+                                Icons.person,
+                                size: 50,
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 20,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withAlpha(128),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(width: 20),
             Expanded(
