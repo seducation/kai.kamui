@@ -1,5 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:my_app/appwrite_service.dart';
+import 'package:my_app/widgets/edit_profile_fab.dart';
 import 'package:provider/provider.dart';
 
 // The main dialog widget that contains the form.
@@ -14,9 +19,11 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _bioController = TextEditingController();
-  final _profileImageController = TextEditingController();
-  final _bannerImageController = TextEditingController();
+  final _handleController = TextEditingController();
+  final _locationController = TextEditingController();
   String _selectedType = "profile";
+  File? _profileImage;
+  File? _bannerImage;
 
   bool _createMore = false;
 
@@ -24,9 +31,31 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
   void dispose() {
     _nameController.dispose();
     _bioController.dispose();
-    _profileImageController.dispose();
-    _bannerImageController.dispose();
+    _handleController.dispose();
+    _locationController.dispose();
     super.dispose();
+  }
+
+  Future<File?> _pickAndCropImage(ImageSource source) async {
+    final pickedFile = await ImagePicker().pickImage(source: source);
+    if (pickedFile == null) return null;
+
+    final croppedFile = await ImageCropper().cropImage(
+      sourcePath: pickedFile.path,
+      uiSettings: [
+        AndroidUiSettings(
+            toolbarTitle: 'Cropper',
+            toolbarColor: Colors.deepOrange,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false),
+        IOSUiSettings(
+          title: 'Cropper',
+        ),
+      ],
+    );
+
+    return croppedFile != null ? File(croppedFile.path) : null;
   }
 
   Future<void> _createProfile() async {
@@ -37,33 +66,54 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
         final user = await appwriteService.getUser();
 
         if (user == null) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('You must be logged in to create a profile.')),
-            );
-            return;
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('You must be logged in to create a profile.')),
+          );
+          return;
         }
 
-        // --- Check for existing profile --- 
         if (_selectedType == 'profile') {
-          final existingProfiles = await appwriteService.getUserProfiles(ownerId: user.$id);
-          if (existingProfiles.rows.any((row) => row.data['type'] == 'profile')) {
+          final existingProfiles =
+              await appwriteService.getUserProfiles(ownerId: user.$id);
+          if (existingProfiles.rows
+              .any((row) => row.data['type'] == 'profile')) {
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('You can only create one main profile.')),
+              const SnackBar(
+                  content: Text('You can only create one main profile.')),
             );
-            return; // Stop the creation process
+            return;
           }
         }
 
-        // DEFINITIVE FIX: The incorrect ownerId parameter has been removed.
-        // The ownerId is now handled correctly within the appwrite_service.
+        String? profileImageId;
+        if (_profileImage != null) {
+          final file = await appwriteService.uploadFile(
+            bytes: _profileImage!.readAsBytesSync(),
+            filename: _profileImage!.path.split('/').last,
+          );
+          profileImageId = file.$id;
+        }
+
+        String? bannerImageId;
+        if (_bannerImage != null) {
+          final file = await appwriteService.uploadFile(
+            bytes: _bannerImage!.readAsBytesSync(),
+            filename: _bannerImage!.path.split('/').last,
+          );
+          bannerImageId = file.$id;
+        }
+
         await appwriteService.createProfile(
           name: _nameController.text,
           type: _selectedType,
           bio: _bioController.text,
-          profileImageUrl: _profileImageController.text,
-          bannerImageUrl: _bannerImageController.text,
+          handle: _handleController.text,
+          location: _locationController.text,
+          profileImageUrl: profileImageId ?? '',
+          bannerImageUrl: bannerImageId ?? '',
         );
 
         if (!mounted) return;
@@ -79,9 +129,11 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
           _formKey.currentState!.reset();
           _nameController.clear();
           _bioController.clear();
-          _profileImageController.clear();
-          _bannerImageController.clear();
+          _handleController.clear();
+          _locationController.clear();
           setState(() {
+            _profileImage = null;
+            _bannerImage = null;
             _selectedType = "profile";
           });
         }
@@ -103,9 +155,9 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       insetPadding: const EdgeInsets.all(16),
       child: Container(
-        width: 500, // Max width for tablet/desktop
-        constraints:
-            BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+        width: 600, // Max width for tablet/desktop
+        constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.9),
         child: Form(
           key: _formKey,
           child: Column(
@@ -113,13 +165,13 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
             children: [
               // --- Header Section ---
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       "Create Profile",
-                      style: theme.textTheme.titleLarge,
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -138,19 +190,39 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CustomNullTextField(
-                        controller: _nameController,
-                        label: "Name",
-                        hintText: "Enter string",
-                        maxLength: 256,
-                        minLines: 3,
-                        icon: Icons.title,
+                      ChannelHeader(
+                        handleController: _handleController,
+                        onBannerTap: () async {
+                          final image = await _pickAndCropImage(ImageSource.gallery);
+                          if (image != null) {
+                            setState(() {
+                              _bannerImage = image;
+                            });
+                          }
+                        },
+                        onProfileTap: () async {
+                          final image = await _pickAndCropImage(ImageSource.gallery);
+                          if (image != null) {
+                            setState(() {
+                              _profileImage = image;
+                            });
+                          }
+                        },
+                        bannerImage: _bannerImage,
+                        profileImage: _profileImage,
                       ),
                       const SizedBox(height: 24),
-                      DropdownWidget(
+                      CustomTextField(
+                        controller: _nameController,
+                        label: "Name",
+                        hintText: "Enter a name for the profile",
+                        icon: Icons.person,
+                      ),
+                      const SizedBox(height: 24),
+                      CustomDropdown(
                         label: "Type",
+                        value: _selectedType,
                         items: const ["profile", "channel", "thread", "business"],
-                        selectedItem: _selectedType,
                         onChanged: (newValue) {
                           setState(() {
                             _selectedType = newValue!;
@@ -159,29 +231,20 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
                         icon: Icons.category,
                       ),
                       const SizedBox(height: 24),
-                      CustomNullTextField(
+                      CustomTextField(
                         controller: _bioController,
                         label: "Bio",
-                        hintText: "Enter text",
+                        hintText: "Tell us about yourself",
                         isSingleLine: false,
                         minLines: 3,
-                        icon: Icons.person,
+                        icon: Icons.description,
                       ),
                       const SizedBox(height: 24),
-                      CustomNullTextField(
-                        controller: _profileImageController,
-                        label: "Profile Image",
-                        hintText: "Enter image URL",
-                        isSingleLine: true,
-                        icon: Icons.image,
-                      ),
-                      const SizedBox(height: 24),
-                      CustomNullTextField(
-                        controller: _bannerImageController,
-                        label: "Banner Image",
-                        hintText: "Enter image URL",
-                        isSingleLine: true,
-                        icon: Icons.image,
+                       CustomTextField(
+                        controller: _locationController,
+                        label: "Location",
+                        hintText: "Enter your location",
+                        icon: Icons.location_on,
                       ),
                     ],
                   ),
@@ -201,10 +264,6 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
                       children: [
                         Switch(
                           value: _createMore,
-                          activeThumbColor: theme.colorScheme.primary,
-                          inactiveThumbColor: theme.disabledColor,
-                          inactiveTrackColor:
-                              theme.disabledColor.withAlpha(100),
                           onChanged: (val) => setState(() => _createMore = val),
                         ),
                         const SizedBox(width: 8),
@@ -217,11 +276,6 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
                     // Cancel Button
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      style: TextButton.styleFrom(
-                        foregroundColor: theme.textTheme.bodyMedium?.color,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 16),
-                      ),
                       child: const Text("Cancel"),
                     ),
                     const SizedBox(width: 12),
@@ -229,17 +283,11 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
                     // Create Button
                     ElevatedButton(
                       onPressed: _createProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: theme.colorScheme.onPrimary,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 16),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6)),
+                       style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
                       ),
-                      child: const Text("Create",
-                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      child: const Text("Create"),
                     ),
                   ],
                 ),
@@ -248,222 +296,6 @@ class _CreateRowDialogState extends State<CreateRowDialog> {
           ),
         ),
       ),
-    );
-  }
-}
-
-// --- Reusable Custom Input Field with NULL Checkbox and Counter ---
-class CustomNullTextField extends StatefulWidget {
-  final String label;
-  final String hintText;
-  final int? maxLength;
-  final int minLines;
-  final bool isSingleLine;
-  final IconData icon;
-  final TextEditingController controller;
-
-  const CustomNullTextField({
-    super.key,
-    required this.label,
-    required this.hintText,
-    this.maxLength,
-    this.minLines = 1,
-    this.isSingleLine = false,
-    required this.icon,
-    required this.controller,
-  });
-
-  @override
-  State<CustomNullTextField> createState() => _CustomNullTextFieldState();
-}
-
-class _CustomNullTextFieldState extends State<CustomNullTextField> {
-  bool isNull = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Label Row (title optional)
-        Row(
-          children: [
-            Icon(widget.icon, size: 14, color: theme.iconTheme.color),
-            const SizedBox(width: 6),
-            RichText(
-              text: TextSpan(
-                text: widget.label,
-                style: theme.textTheme.bodyLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
-        // Input Container with Counter and NULL Checkbox
-        Container(
-          decoration: BoxDecoration(
-            color: theme.inputDecorationTheme.fillColor,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: theme.dividerColor),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: widget.controller,
-                enabled: !isNull, // Disable input if NULL is checked
-                maxLines: widget.isSingleLine ? 1 : widget.minLines,
-                maxLength: widget.maxLength,
-                style: TextStyle(
-                  color: isNull
-                      ? theme.disabledColor
-                      : theme.textTheme.bodyLarge?.color,
-                  fontSize: 14,
-                ),
-                decoration: InputDecoration(
-                  hintText: widget.hintText,
-                  hintStyle: theme.inputDecorationTheme.hintStyle,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.all(12),
-                  counterText: "", // Hide default counter provided by maxLength
-                ),
-                validator: (value) {
-                  if (!isNull && (value == null || value.isEmpty)) {
-                    return 'Please enter a value';
-                  }
-                  return null;
-                },
-              ),
-
-              // Footer inside the input box (Counter + Null Checkbox)
-              Padding(
-                padding: const EdgeInsets.only(left: 12, right: 8, bottom: 4),
-                child: Row(
-                  children: [
-                    // Custom Counter
-                    if (widget.maxLength != null)
-                      ValueListenableBuilder(
-                        valueListenable: widget.controller,
-                        builder: (context, TextEditingValue value, _) {
-                          return Text(
-                            "${value.text.length}/${widget.maxLength}",
-                            style: theme.textTheme.bodySmall,
-                          );
-                        },
-                      ),
-                    const Spacer(),
-                    // Null Checkbox
-                    InkWell(
-                      onTap: () {
-                        setState(() {
-                          isNull = !isNull;
-                          if (isNull) widget.controller.clear();
-                        });
-                      },
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Checkbox(
-                            value: isNull,
-                            onChanged: (val) {
-                              setState(() {
-                                isNull = val ?? false;
-                                if (isNull) widget.controller.clear();
-                              });
-                            },
-                            side: BorderSide(
-                                color: theme.dividerColor, width: 1),
-                            activeColor: theme.primaryColor,
-                            checkColor: theme.colorScheme.onPrimary,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          Text(
-                            "NULL",
-                            style: theme.textTheme.bodySmall
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    )
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class DropdownWidget extends StatelessWidget {
-  final String label;
-  final List<String> items;
-  final String selectedItem;
-  final ValueChanged<String?> onChanged;
-  final IconData icon;
-
-  const DropdownWidget({
-    super.key,
-    required this.label,
-    required this.items,
-    required this.selectedItem,
-    required this.onChanged,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 14, color: theme.iconTheme.color),
-            const SizedBox(width: 6),
-            RichText(
-              text: TextSpan(
-                text: label,
-                style: theme.textTheme.bodyLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
-                children: [
-                  TextSpan(
-                    text: " optional",
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: theme.inputDecorationTheme.fillColor,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: theme.dividerColor),
-          ),
-          child: DropdownButton<String>(
-            value: selectedItem,
-            isExpanded: true,
-            underline: Container(),
-            items: items.map<DropdownMenuItem<String>>((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(value),
-              );
-            }).toList(),
-            onChanged: onChanged,
-          ),
-        ),
-      ],
     );
   }
 }
