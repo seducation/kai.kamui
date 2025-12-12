@@ -12,7 +12,8 @@ import 'package:my_app/tabs/podcasts_tab.dart';
 import 'package:my_app/tabs/posts_tab.dart';
 import 'package:my_app/tabs/products_tab.dart';
 import 'package:my_app/tabs/shorts_tab.dart';
-import 'package:my_app/tabs/video_tab.dart';
+import 'package:my_app/tabs/videos_tab.dart';
+import 'package:my_app/widgets/edit_profile_fab.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -135,71 +136,6 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
       });
       // Handle error, maybe show a snackbar
     }
-  }
-
-  Future<void> _showEditProfileDialog() async {
-    final nameController = TextEditingController(text: _profile?.name);
-    final bioController = TextEditingController(text: _profile?.bio);
-    
-    // Store the Navigator and ScaffoldMessenger before the async gap.
-    final navigator = Navigator.of(context);
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-    await showDialog<void>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Edit Profile'),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                ),
-                TextField(
-                  controller: bioController,
-                  decoration: const InputDecoration(labelText: 'Bio'),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Save'),
-              onPressed: () async {
-                if (_profile == null) return;
-                try {
-                  await _appwriteService.updateProfile(
-                    profileId: _profile!.id,
-                    data: {
-                      'name': nameController.text,
-                      'bio': bioController.text,
-                    },
-                  );
-                  
-                  // Use the cached navigator to pop the dialog
-                  navigator.pop();
-                  _loadProfileData(); // Reload data to show changes
-                } catch (e) {
-                  // Use the cached scaffoldMessenger to show a snackbar
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(content: Text('Failed to update profile: $e')),
-                  );
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -404,12 +340,7 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                       child: const Icon(Icons.shopping_bag),
                     ),
                   ),
-                FloatingActionButton(
-                  heroTag: 'editProfile',
-                  onPressed: _showEditProfileDialog,
-                  backgroundColor: Colors.black,
-                  child: const Icon(Icons.edit),
-                ),
+                const EditProfileFAB(),
               ],
             )
           : null,
