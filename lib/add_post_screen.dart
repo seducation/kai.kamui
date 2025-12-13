@@ -453,15 +453,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
         TextField(
           enabled: _allowUserEditing,
           decoration: const InputDecoration(
-            labelText: 'Input 2',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          enabled: _allowUserEditing,
-          decoration: const InputDecoration(
-            labelText: 'Input 3',
+            labelText: 'Add Collaboration',
             border: OutlineInputBorder(),
           ),
         ),
