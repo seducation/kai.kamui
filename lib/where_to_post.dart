@@ -20,19 +20,52 @@ class _WhereToPostScreenState extends State<WhereToPostScreen> {
   late Future<List<Profile>> _profilesFuture;
   final List<String> _selectedProfileIds = [];
   bool _isPublishing = false;
+  List<Profile> _threadProfiles = [];
+  bool _isLoadingThreads = false;
 
   @override
   void initState() {
     super.initState();
     final authService = Provider.of<AuthService>(context, listen: false);
     _profilesFuture = _fetchUserProfiles(authService.currentUser!.id);
+    _fetchThreadProfiles();
+  }
+
+  Future<void> _fetchThreadProfiles() async {
+    setState(() {
+      _isLoadingThreads = true;
+    });
+    try {
+      final appwriteService = context.read<AppwriteService>();
+      final response = await appwriteService.getProfiles(); // Fetches all profiles
+      if (mounted) {
+        setState(() {
+          _threadProfiles = response.rows
+              .map((row) => Profile.fromRow(row))
+              .where((profile) => profile.type == 'thread') // Filter on the client-side
+              .toList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching thread profiles: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingThreads = false;
+        });
+      }
+    }
   }
 
   Future<List<Profile>> _fetchUserProfiles(String userId) async {
     try {
       final appwriteService = context.read<AppwriteService>();
       final response = await appwriteService.getUserProfiles(ownerId: userId);
-      return response.rows.map((row) => Profile.fromMap(row.data, row.$id)).toList();
+      return response.rows.map((row) => Profile.fromRow(row)).toList();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -102,7 +135,6 @@ class _WhereToPostScreenState extends State<WhereToPostScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-         
       body: FutureBuilder<List<Profile>>(
         future: _profilesFuture,
         builder: (context, snapshot) {
@@ -125,26 +157,75 @@ class _WhereToPostScreenState extends State<WhereToPostScreen> {
             );
           }
 
-          return ListView.builder(
-            itemCount: profiles.length,
-            itemBuilder: (context, index) {
-              final profile = profiles[index];
-              final isSelected = _selectedProfileIds.contains(profile.id);
+          List<Widget> listItems = [];
 
+          listItems.addAll(profiles.map((profile) {
+            final isSelected = _selectedProfileIds.contains(profile.id);
+            return CheckboxListTile(
+              secondary: CircleAvatar(
+                backgroundImage: NetworkImage(profile.profileImageUrl ?? ''),
+              ),
+              title: Text(profile.name),
+              subtitle: Text(profile.type),
+              value: isSelected,
+              onChanged: (bool? value) {
+                if (value != null) {
+                  _toggleProfileSelection(profile.id);
+                }
+              },
+            );
+          }).toList());
+
+          listItems.add(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Threads',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _fetchThreadProfiles,
+                  ),
+                ],
+              ),
+            ),
+          );
+
+          if (_isLoadingThreads) {
+            listItems.add(const Center(child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
+            )));
+          } else if (_threadProfiles.isEmpty) {
+            listItems.add(const Center(child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('No thread recommendations found.'),
+            )));
+          } else {
+            listItems.addAll(_threadProfiles.map((profile) {
+              final isSelected = _selectedProfileIds.contains(profile.id);
               return CheckboxListTile(
                 secondary: CircleAvatar(
                   backgroundImage: NetworkImage(profile.profileImageUrl ?? ''),
                 ),
                 title: Text(profile.name),
-                subtitle: Text(profile.type), // e.g., 'profile', 'channel'
+                subtitle: const Text('thread recommendation'),
                 value: isSelected,
                 onChanged: (bool? value) {
-                   if (value != null) {
-                     _toggleProfileSelection(profile.id);
-                   }
+                  if (value != null) {
+                    _toggleProfileSelection(profile.id);
+                  }
                 },
               );
-            },
+            }).toList());
+          }
+
+          return ListView(
+            children: listItems,
           );
         },
       ),
