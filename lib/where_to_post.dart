@@ -20,42 +20,42 @@ class _WhereToPostScreenState extends State<WhereToPostScreen> {
   late Future<List<Profile>> _profilesFuture;
   final List<String> _selectedProfileIds = [];
   bool _isPublishing = false;
-  List<Profile> _threadProfiles = [];
-  bool _isLoadingThreads = false;
+  List<Profile> _followingProfiles = [];
+  bool _isLoadingFollowing = false;
 
   @override
   void initState() {
     super.initState();
     final authService = Provider.of<AuthService>(context, listen: false);
     _profilesFuture = _fetchUserProfiles(authService.currentUser!.id);
-    _fetchThreadProfiles();
+    _fetchFollowingProfiles(authService.currentUser!.id);
   }
 
-  Future<void> _fetchThreadProfiles() async {
+  Future<void> _fetchFollowingProfiles(String userId) async {
     setState(() {
-      _isLoadingThreads = true;
+      _isLoadingFollowing = true;
     });
     try {
       final appwriteService = context.read<AppwriteService>();
-      final response = await appwriteService.getProfiles(); // Fetches all profiles
+      final response = await appwriteService.getFollowingProfiles(userId: userId);
       if (mounted) {
         setState(() {
-          _threadProfiles = response.rows
+          _followingProfiles = response.rows
               .map((row) => Profile.fromRow(row))
-              .where((profile) => profile.type == 'thread') // Filter on the client-side
+              .where((profile) => profile.type == 'thread')
               .toList();
         });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching thread profiles: $e')),
+          SnackBar(content: Text('Error fetching following profiles: $e')),
         );
       }
     } finally {
       if (mounted) {
         setState(() {
-          _isLoadingThreads = false;
+          _isLoadingFollowing = false;
         });
       }
     }
@@ -148,72 +148,68 @@ class _WhereToPostScreenState extends State<WhereToPostScreen> {
 
           final profiles = snapshot.data!;
 
-          if (profiles.isEmpty) {
+          if (profiles.isEmpty && _followingProfiles.isEmpty) {
             return const Center(
               child: Text(
-                'You don\'t have any profiles to post to.\nGo to your profile to create one.',
+                'You don\'t have any profiles to post to and you are not following anyone.\nGo to your profile to create one or find accounts to follow.',
                 textAlign: TextAlign.center,
               ),
             );
           }
-
+          
           List<Widget> listItems = [];
 
-          listItems.addAll(profiles.map((profile) {
-            final isSelected = _selectedProfileIds.contains(profile.id);
-            return CheckboxListTile(
-              secondary: CircleAvatar(
-                backgroundImage: NetworkImage(profile.profileImageUrl ?? ''),
+          if (profiles.isNotEmpty) {
+            listItems.add(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
+                child: Text(
+                  'Your Profiles',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
-              title: Text(profile.name),
-              subtitle: Text(profile.type),
-              value: isSelected,
-              onChanged: (bool? value) {
-                if (value != null) {
-                  _toggleProfileSelection(profile.id);
-                }
-              },
             );
-          }).toList());
-
-          listItems.add(
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Threads',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: _fetchThreadProfiles,
-                  ),
-                ],
-              ),
-            ),
-          );
-
-          if (_isLoadingThreads) {
-            listItems.add(const Center(child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: CircularProgressIndicator(),
-            )));
-          } else if (_threadProfiles.isEmpty) {
-            listItems.add(const Center(child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No thread recommendations found.'),
-            )));
-          } else {
-            listItems.addAll(_threadProfiles.map((profile) {
+            listItems.addAll(profiles.map((profile) {
               final isSelected = _selectedProfileIds.contains(profile.id);
               return CheckboxListTile(
                 secondary: CircleAvatar(
                   backgroundImage: NetworkImage(profile.profileImageUrl ?? ''),
                 ),
                 title: Text(profile.name),
-                subtitle: const Text('thread recommendation'),
+                subtitle: Text(profile.type),
+                value: isSelected,
+                onChanged: (bool? value) {
+                  if (value != null) {
+                    _toggleProfileSelection(profile.id);
+                  }
+                },
+              );
+            }).toList());
+          }
+
+          if (_isLoadingFollowing) {
+            listItems.add(const Center(child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
+            )));
+          } else if (_followingProfiles.isNotEmpty) {
+             listItems.add(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
+                child: Text(
+                  'Following',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+            );
+            listItems.addAll(_followingProfiles.map((profile) {
+              final isSelected = _selectedProfileIds.contains(profile.id);
+              return CheckboxListTile(
+                secondary: CircleAvatar(
+                  backgroundImage: NetworkImage(profile.profileImageUrl ?? ''),
+                ),
+                title: Text(profile.name),
+                subtitle: Text(profile.type),
                 value: isSelected,
                 onChanged: (bool? value) {
                   if (value != null) {
