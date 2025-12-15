@@ -7,14 +7,15 @@ import 'package:provider/provider.dart';
 
 class ProductOptionsMenu extends StatelessWidget {
   final Product product;
+  final String ownerId;
 
-  const ProductOptionsMenu({super.key, required this.product});
+  const ProductOptionsMenu({super.key, required this.product, required this.ownerId});
 
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context, listen: false);
     final appwriteService = Provider.of<AppwriteService>(context, listen: false);
-    final isOwner = authService.currentUser?.id == product.profileId;
+    final isOwner = authService.currentUser?.id == ownerId;
 
     void handleDelete() async {
       final confirmed = await showDialog<bool>(

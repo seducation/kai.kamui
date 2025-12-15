@@ -1,14 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/appwrite_service.dart';
+import 'package:my_app/model/profile.dart';
 import 'package:my_app/models/product.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:my_app/widgets/product_options_menu.dart';
 import 'package:provider/provider.dart';
 
-class ProductDetailPage extends StatelessWidget {
+class ProductDetailPage extends StatefulWidget {
   final Product product;
 
   const ProductDetailPage({super.key, required this.product});
+
+  @override
+  State<ProductDetailPage> createState() => _ProductDetailPageState();
+}
+
+class _ProductDetailPageState extends State<ProductDetailPage> {
+  String? _ownerId;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOwnerId();
+  }
+
+  Future<void> _fetchOwnerId() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+    try {
+      final appwriteService = context.read<AppwriteService>();
+      final profileDoc = await appwriteService.getProfile(widget.product.profileId);
+      final profile = Profile.fromRow(profileDoc);
+      if (mounted) {
+        setState(() {
+          _ownerId = profile.ownerId;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      // Handle error, maybe show a snackbar
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,18 +57,19 @@ class ProductDetailPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(product.name),
+        title: Text(widget.product.name),
         actions: [
-          ProductOptionsMenu(product: product),
+          if (!_isLoading && _ownerId != null)
+            ProductOptionsMenu(product: widget.product, ownerId: _ownerId!),
         ],
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (product.imageId != null)
+            if (widget.product.imageId != null)
               CachedNetworkImage(
-                imageUrl: appwriteService.getFileViewUrl(product.imageId!),
+                imageUrl: appwriteService.getFileViewUrl(widget.product.imageId!),
                 fit: BoxFit.cover,
                 width: double.infinity,
                 height: 300,
@@ -46,22 +88,22 @@ class ProductDetailPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product.name,
+                    widget.product.name,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '\u20b9${product.price}',
+                    '\u20b9${widget.product.price}',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.green),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    product.location,
+                    widget.product.location,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    product.description,
+                    widget.product.description,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
