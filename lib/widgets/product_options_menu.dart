@@ -39,6 +39,8 @@ class ProductOptionsMenu extends StatelessWidget {
         try {
           await appwriteService.deleteProduct(product.id);
           if (context.mounted) {
+            // Pop the dialog and the detail page
+            Navigator.of(context).pop();
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Product deleted successfully!')),
