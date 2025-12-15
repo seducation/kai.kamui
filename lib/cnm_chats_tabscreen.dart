@@ -67,7 +67,7 @@ class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
         // Group messages by conversation
         if (!conversations.containsKey(conversationId)) {
            conversations[conversationId] = ChatModel(
-            userId: profile.data['ownerId'],
+            userId: profile.$id,
             name: profile.data['name'] as String,
             message: message.data['message'] as String,
             time: message.$createdAt,
