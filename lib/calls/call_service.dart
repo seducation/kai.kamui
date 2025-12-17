@@ -1,11 +1,11 @@
 import 'package:livekit_client/livekit_client.dart';
+import 'package:my_app/appwrite_service.dart';
 
 class CallService {
-  final String _url = 'wss://my-new-project-21vhn4cm.livekit.cloud'; // Correct: Your LiveKit URL
+  final String _url = 'wss://my-new-project-21vhn4cm.livekit.cloud';
+  final AppwriteService _appwriteService;
 
-  // IMPORTANT: This token must be generated from your server and should be short-lived.
-  // Do NOT hardcode your API Secret here.
-  final String _token = 'YOUR_LIVEKIT_TOKEN';
+  CallService(this._appwriteService);
 
   Future<Room> connectToRoom(String roomName) async {
     final room = Room(
@@ -15,11 +15,11 @@ class CallService {
       ),
     );
 
-    // In a real app, you would fetch the token from your server here
-    // before connecting.
+    final token = await _appwriteService.getLiveKitToken(roomName: roomName);
+
     await room.connect(
       _url,
-      _token,
+      token,
     );
 
     return room;

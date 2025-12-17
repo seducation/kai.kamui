@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:developer';
 import 'dart:typed_data';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
@@ -11,6 +13,7 @@ class AppwriteService {
   late TablesDB _db;
   late Storage _storage;
   late Account _account;
+  late Functions _functions;
 
   Client get client => _client;
 
@@ -27,6 +30,26 @@ class AppwriteService {
     _db = TablesDB(_client);
     _storage = Storage(_client);
     _account = Account(_client);
+    _functions = Functions(_client);
+  }
+
+  Future<String> getLiveKitToken({required String roomName}) async {
+    final user = await getUser();
+    if (user == null) {
+      throw AppwriteException('User not authenticated', 401);
+    }
+
+    try {
+      final result = await _functions.createExecution(
+        functionId: 'function-generate-livekit-token',
+        body: '{"roomName": "$roomName", "userId": "${user.$id}"}',
+      );
+      final response = jsonDecode(result.responseBody);
+      return response['token'];
+    } on AppwriteException catch (e) {
+      log('Error getting LiveKit token: ${e.message}');
+      rethrow;
+    }
   }
 
   Future<models.User> signUp(

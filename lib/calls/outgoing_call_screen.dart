@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/calls/call_service.dart';
+import 'package:provider/provider.dart';
 
 class OutgoingCallScreen extends StatefulWidget {
   final String roomName;
@@ -13,11 +15,12 @@ class OutgoingCallScreen extends StatefulWidget {
 
 class _OutgoingCallScreenState extends State<OutgoingCallScreen> {
   Room? _room;
-  final CallService _callService = CallService();
+  late final CallService _callService;
 
   @override
   void initState() {
     super.initState();
+    _callService = CallService(context.read<AppwriteService>());
     _connectToRoom();
   }
 
