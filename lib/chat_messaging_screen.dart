@@ -30,6 +30,7 @@ class _ChatMessagingScreenState extends State<ChatMessagingScreen> {
   models.User? _currentUser;
   String? _chatId;
   String? _receiverOwnerId;
+  String _profileName = "";
 
   final List<models.Row> _messages = [];
   bool _isLoading = true;
@@ -47,9 +48,40 @@ class _ChatMessagingScreenState extends State<ChatMessagingScreen> {
       _currentUser = await _appwriteService.getUser();
       if (!mounted) return;
 
-      final receiverProfile = await _appwriteService.getProfile(widget.chat.userId);
-      _receiverOwnerId = receiverProfile.data['ownerId'];
+      final senderProfiles = await _appwriteService.getUserProfiles(ownerId: _currentUser!.$id);
       if (!mounted) return;
+      final userProfiles = senderProfiles.rows.where((p) => p.data['type'] == 'profile');
+
+      if (userProfiles.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Go and create a profile first'),
+          ));
+        }
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final receiverChatProfile = await _appwriteService.getProfile(widget.chat.userId);
+      _receiverOwnerId = receiverChatProfile.data['ownerId'];
+      if (!mounted) return;
+
+      final receiverOwnerProfiles = await _appwriteService.getUserProfiles(ownerId: _receiverOwnerId!);
+      if (!mounted) return;
+
+      String nameToShow = receiverChatProfile.data['name']; // Default to current chat profile name
+      for (final profile in receiverOwnerProfiles.rows) {
+        if (profile.data['type'] == 'profile') {
+          nameToShow = profile.data['name'];
+          break;
+        }
+      }
+
+      setState(() {
+        _profileName = nameToShow;
+      });
 
       _chatId = _getChatId(_currentUser!.$id, _receiverOwnerId!);
 
@@ -99,6 +131,19 @@ class _ChatMessagingScreenState extends State<ChatMessagingScreen> {
   Future<void> _handleSubmitted(String text) async {
     if (text.trim().isEmpty || _currentUser == null || _receiverOwnerId == null) return;
 
+    final senderProfiles = await _appwriteService.getUserProfiles(ownerId: _currentUser!.$id);
+    if (!mounted) return;
+    final userProfiles = senderProfiles.rows.where((p) => p.data['type'] == 'profile');
+
+    if (userProfiles.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Go and create a profile first'),
+        ));
+      }
+      return;
+    }
+
     _textController.clear();
     _focusNode.requestFocus();
 
@@ -131,7 +176,7 @@ class _ChatMessagingScreenState extends State<ChatMessagingScreen> {
     return Scaffold(
       appBar: ChatAppBar(
         urlImage: widget.chat.imgPath,
-        title: widget.chat.name,
+        title: _profileName,
         onOff: widget.chat.isOnline ? "Online" : "Offline",
         onCallPressed: () {
           Navigator.push(

@@ -38,54 +38,70 @@ class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
         }
         return;
       }
+      final senderProfiles = await appwrite.getUserProfiles(ownerId: user.$id);
+      if (!mounted) return;
+      final userProfiles = senderProfiles.rows.where((p) => p.data['type'] == 'profile');
 
-      // 1. Fetch all profiles and create a map for efficient lookup.
+      if (userProfiles.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Go and create a profile first'),
+          ));
+        }
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
       final profiles = await appwrite.getProfiles();
-      final profileMap = {
-        for (var profile in profiles.rows) profile.data['ownerId']: profile
-      };
+      final profilesByOwner = <String, List<models.Row>>{};
+      for (final profile in profiles.rows) {
+        final ownerId = profile.data['ownerId'] as String;
+        profilesByOwner.putIfAbsent(ownerId, () => []).add(profile);
+      }
 
-      // 2. Fetch all messages
       final messages = await appwrite.getAllMessages();
       final conversations = <String, ChatModel>{};
 
-      // 3. Process messages to build conversation list
       for (final message in messages.rows) {
         final chatId = message.data['chatId'] as String;
-        
-        // Determine the other user's ID in the chat
         final ids = chatId.split('_');
         final otherUserId = ids.firstWhere((id) => id != user.$id, orElse: () => '');
 
-        if (otherUserId.isEmpty || !profileMap.containsKey(otherUserId)) {
-          continue; // Skip if other user's profile is not found
+        if (otherUserId.isEmpty) continue;
+
+        final otherUserProfiles = profilesByOwner[otherUserId];
+        if (otherUserProfiles == null || otherUserProfiles.isEmpty) {
+          continue; 
         }
-        
-        final models.Row profile = profileMap[otherUserId]!;
+
+        final mainProfile = otherUserProfiles.firstWhere(
+          (p) => p.data['type'] == 'profile',
+          orElse: () => otherUserProfiles.first,
+        );
+
         final conversationId = _getChatId(user.$id, otherUserId);
 
-        // Group messages by conversation
         if (!conversations.containsKey(conversationId)) {
-           conversations[conversationId] = ChatModel(
-            userId: profile.$id,
-            name: profile.data['name'] as String,
+          conversations[conversationId] = ChatModel(
+            userId: mainProfile.$id,
+            name: mainProfile.data['name'] as String,
             message: message.data['message'] as String,
             time: message.$createdAt,
-            imgPath: profile.data['profileImageUrl'] as String,
-            hasStory: false, // Placeholder
-            messageCount: 0, // Placeholder
+            imgPath: mainProfile.data['profileImageUrl'] as String,
+            hasStory: false,
+            messageCount: 0,
           );
         } else {
-            // Update with the latest message
-            conversations[conversationId]!.message = message.data['message'] as String;
-            conversations[conversationId]!.time = message.$createdAt;
+          conversations[conversationId]!.message = message.data['message'] as String;
+          conversations[conversationId]!.time = message.$createdAt;
         }
       }
-      
+
       if (mounted) {
         setState(() {
           _chatItems = conversations.values.toList();
-          // Sort by time
           _chatItems.sort((a, b) => b.time.compareTo(a.time));
           _isLoading = false;
         });
@@ -99,11 +115,10 @@ class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
     }
   }
 
-   String _getChatId(String userId1, String userId2) {
+  String _getChatId(String userId1, String userId2) {
     final ids = [userId1, userId2]..sort();
     return ids.join('_');
   }
-
 
   void _viewStory(BuildContext context, int index) {
     Navigator.push(
@@ -111,9 +126,7 @@ class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
       MaterialPageRoute(
         builder: (context) => OneTimeMessageScreen(
           message: "This is a one-time message from ${_chatItems[index].name}",
-          onStoryViewed: () {
-            // This should be handled by the parent widget
-          },
+          onStoryViewed: () {},
         ),
       ),
     );
