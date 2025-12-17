@@ -305,27 +305,56 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                                 ),
                               const SizedBox(height: 16),
                               if (!isCurrentUser)
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: _toggleFollow,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: _isFollowing
-                                          ? Colors.grey[200]
-                                          : Colors.black,
-                                      foregroundColor: _isFollowing
-                                          ? Colors.black
-                                          : Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(24)),
-                                    ),
-                                    child: Text(
-                                        _isFollowing ? "Unfollow" : "Follow",
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                                ),
+                                _isFollowing
+                                    ? Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: _toggleFollow,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.grey[200],
+                                                foregroundColor: Colors.black,
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(24)),
+                                              ),
+                                              child: const Text("Unfollow",
+                                                  style: TextStyle(
+                                                      fontWeight: FontWeight.bold)),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                            
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.grey[200],
+                                              foregroundColor: Colors.black,
+                                              shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(24)),
+                                            ),
+                                            child: const Icon(Icons.arrow_drop_down),
+                                          ),
+                                        ],
+                                      )
+                                    : SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton(
+                                          onPressed: _toggleFollow,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.black,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(24)),
+                                          ),
+                                          child: const Text("Follow",
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold)),
+                                        ),
+                                      ),
                             ],
                           ),
                         ),
