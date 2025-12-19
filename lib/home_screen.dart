@@ -267,9 +267,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         body: tabBarView,
       );
     } else {
-      final String currentTitle = (_mainTabController.index < 2)
-          ? 'gvone'
-          : _tabs[_mainTabController.index];
+      const String currentTitle = 'gvone';
 
       return Scaffold(
         body: NestedScrollView(

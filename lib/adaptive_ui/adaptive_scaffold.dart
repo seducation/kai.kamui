@@ -39,7 +39,6 @@ class AdaptiveScaffold extends StatelessWidget {
   /// 1. Mobile (< 600px): BottomNav + Single Screen
   Widget _buildMobile(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
       body: screens[selectedIndex],
       bottomNavigationBar: BottomNavPane(
         selectedIndex: selectedIndex,
