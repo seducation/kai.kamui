@@ -10,7 +10,6 @@ import 'comments_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-
 double calculateScore(Post post) {
   final hoursSincePosted = DateTime.now().difference(post.timestamp).inHours;
   final score = ((post.stats.likes * 1) + (post.stats.comments * 5) + (post.stats.shares * 10)) /
@@ -75,7 +74,6 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
             shares: row.data['shares'] ?? 0,
             views: row.data['views'] ?? 0,
           ),
-          // We will manage the `isLiked` and `isSaved` state within the PostWidget itself
         );
       }).whereType<Post>().toList();
 
@@ -92,7 +90,6 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
           _isLoading = false;
         });
       }
-      // Handle error
     }
   }
 
@@ -117,154 +114,17 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
       return const Center(child: Text("No posts available."));
     }
 
-    final shortsPosts = _posts.where((p) => p.type == PostType.image).toList();
-    final List<Widget> feedItems = [];
-
-    if (_posts.isNotEmpty) {
-      feedItems.add(PostWidget(post: _posts.first, allPosts: _posts));
-    }
-
-    if (shortsPosts.isNotEmpty) {
-      feedItems.add(_buildShortsRail(context, shortsPosts));
-    }
-
-    if (_posts.length > 1) {
-      feedItems.addAll(_posts.skip(1).map((post) => PostWidget(post: post, allPosts: _posts)));
-    }
-
     return ListView.separated(
-      itemCount: feedItems.length,
+      itemCount: _posts.length,
       separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFE0E0E0)),
-      itemBuilder: (context, index) => feedItems[index],
-    );
-  }
-
-   Widget _buildShortsRail(BuildContext context, List<Post> shortsPosts) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12.0),
-            child: Text(
-              "Shorts",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 200,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: shortsPosts.length,
-              itemBuilder: (context, index) {
-                return _ShortsThumbnail(
-                  post: shortsPosts[index],
-                  allPosts: shortsPosts,
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ShortsThumbnail extends StatelessWidget {
-  final Post post;
-  final List<Post> allPosts;
-
-  const _ShortsThumbnail({required this.post, required this.allPosts});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isValidUrl = post.mediaUrl != null && (post.mediaUrl!.startsWith('http') || post.mediaUrl!.startsWith('https'));
-    return GestureDetector(
-      onTap: () {
-        final initialIndex = allPosts.indexWhere((p) => p.id == post.id);
-        if (initialIndex != -1) {
-            Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => ShortsViewerScreen(
-                posts: allPosts,
-                initialIndex: initialIndex,
-                ),
-            ),
-            );
-        }
+      itemBuilder: (context, index) {
+        final post = _posts[index];
+        return PostWidget(post: post, allPosts: _posts);
       },
-      child: Container(
-        width: 120,
-        margin: const EdgeInsets.only(left: 12.0),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (isValidUrl)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12.0),
-              child: CachedNetworkImage(
-                imageUrl: post.mediaUrl!,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(color: Colors.grey[200]),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.error, color: Colors.grey),
-                ),
-              ),
-            ) else Container(color: Colors.grey[200], child: const Icon(Icons.error, color: Colors.grey)),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12.0),
-                gradient: const LinearGradient(
-                  colors: [Colors.transparent, Colors.black54],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 8,
-              left: 8,
-              right: 8,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (post.author.profileImageUrl != null)
-                  CircleAvatar(
-                    radius: 12,
-                    backgroundImage: CachedNetworkImageProvider(post.author.profileImageUrl!),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    post.author.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
 
-
-// --- CONVERTED TO STATEFULWIDGET ---
 class PostWidget extends StatefulWidget {
   final Post post;
   final List<Post> allPosts;
@@ -357,7 +217,6 @@ class _PostWidgetState extends State<PostWidget> {
       await _appwriteService.updatePostLikes(widget.post.id, newLikeCount, widget.post.timestamp.toIso8601String());
       await _prefs!.setBool(widget.post.id, newLikedState);
     } catch (e) {
-      // Revert the state if the update fails
       if(mounted){
         setState(() {
           _isLiked = !newLikedState;
@@ -412,7 +271,6 @@ class _PostWidgetState extends State<PostWidget> {
       }
       await _prefs!.setBool('saved_${widget.post.id}', newSavedState);
     } catch (e) {
-      // Revert the state if the update fails
       if(mounted){
         setState(() {
           _isSaved = !newSavedState;
@@ -709,11 +567,6 @@ class _PostWidgetState extends State<PostWidget> {
   }
 }
 
-
-// ---------------------------------------------------------------------------
-// 4. DETAIL PAGE & SHORTS VIEWER (largely unchanged)
-// ---------------------------------------------------------------------------
-
 class DetailPage extends StatelessWidget {
   final Post post;
 
@@ -844,7 +697,6 @@ class ShortsPage extends StatelessWidget {
           imageUrl: post.mediaUrl!,
           fit: BoxFit.cover,
         ) else Container(color: Colors.black, child: const Center(child: Icon(Icons.error, color: Colors.white, size: 50))),
-        // ... rest of ShortsPage remains the same
          Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -871,7 +723,7 @@ class ShortsPage extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    post.author.name, // handle is not available in Profile model
+                    post.author.name,
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ],
