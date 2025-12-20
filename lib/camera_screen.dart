@@ -364,32 +364,7 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
 
           // Right: Send Button
-          TextButton(
-            onPressed: () => context.push(
-              '/where_to_post',
-              extra: {'images': _capturedImages},
-            ),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.blue,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 10.0,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.0),
-              ),
-            ),
-            child: const Row(
-              children: [
-                Text(
-                  'Send',
-                  style: TextStyle(color: Colors.white, fontSize: 16.0),
-                ),
-                SizedBox(width: 8.0),
-                Icon(Icons.send, color: Colors.white, size: 20.0),
-              ],
-            ),
-          ),
+          SendButton(capturedImages: _capturedImages),
         ],
       ),
     );
@@ -403,6 +378,42 @@ class _CameraScreenState extends State<CameraScreen> {
         fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
         fontSize: 16,
         shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
+      ),
+    );
+  }
+}
+
+class SendButton extends StatelessWidget {
+  final List<XFile> capturedImages;
+
+  const SendButton({super.key, required this.capturedImages});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: () => context.push(
+        '/sent_post',
+        extra: {'images': capturedImages},
+      ),
+      style: TextButton.styleFrom(
+        backgroundColor: Colors.blue,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16.0,
+          vertical: 10.0,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.0),
+        ),
+      ),
+      child: const Row(
+        children: [
+          Text(
+            'Send',
+            style: TextStyle(color: Colors.white, fontSize: 16.0),
+          ),
+          SizedBox(width: 8.0),
+          Icon(Icons.send, color: Colors.white, size: 20.0),
+        ],
       ),
     );
   }
