@@ -111,8 +111,8 @@ class _WhereToPostScreenState extends State<WhereToPostScreen> {
     for (final profileId in _selectedProfileIds) {
       final profile = allProfiles.firstWhere((p) => p.id == profileId);
       if (profile.type == 'thread') {
-        if (!widget.postData.containsKey('authoreid') ||
-            (widget.postData['authoreid'] as List).isEmpty) {
+        if (!widget.postData.containsKey('author_id') ||
+            (widget.postData['author_id'] as List).isEmpty) {
           scaffoldMessenger.showSnackBar(
             const SnackBar(
               content: Text(

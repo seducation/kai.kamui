@@ -149,7 +149,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
       };
 
       if (_allowUserEditing && _selectedProfileId != null) {
-        postData['authoreid'] = [_selectedProfileId];
+        postData['author_id'] = [_selectedProfileId];
       }
 
       // Show the WhereToPostScreen as a modal bottom sheet
@@ -462,7 +462,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Allow to share authoreid'),
+            const Text('Allow to share author_id'),
             Switch(
               value: _allowUserEditing,
               onChanged: (value) {

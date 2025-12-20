@@ -405,7 +405,12 @@ class AppwriteService {
     }
     final ownerId = user.$id;
 
-    final data = {...postData, 'timestamp': DateTime.now().toIso8601String()};
+    final data = {
+      ...postData,
+      'timestamp': DateTime.now().toIso8601String(),
+      'author_id': postData['author_id'],
+      'originalAuthor': postData['originalAuthor'],
+    };
 
     await _db.createRow(
       databaseId: Environment.appwriteDatabaseId,
