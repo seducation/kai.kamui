@@ -64,19 +64,59 @@ class SrvFeatureTabscreen extends StatelessWidget {
                     return const SizedBox.shrink();
                   }
                   final author = snapshot.data!;
-                  final post = Post(
-                    id: postData['\$id'],
-                    author: author,
-                    timestamp: DateTime.tryParse(postData['timestamp'] ?? '') ?? DateTime.now(),
-                    contentText: postData['caption'] ?? '',
-                    stats: PostStats(
-                      likes: postData['likes'] ?? 0,
-                      comments: 0,
-                      shares: 0,
-                      views: 0,
-                    ),
-                  );
-                  return PostItem(post: post, profileId: profileId);
+
+                  final originalAuthorId = postData['authoreid'] as String?;
+
+                  if (originalAuthorId != null &&
+                      originalAuthorId != authorProfileId) {
+                    return FutureBuilder<Profile>(
+                      future: _getAuthorProfile(context, originalAuthorId),
+                      builder: (context, originalAuthorSnapshot) {
+                        if (originalAuthorSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const SizedBox.shrink();
+                        }
+
+                        String contentText = postData['caption'] ?? '';
+                        if (originalAuthorSnapshot.hasData) {
+                          final originalAuthor = originalAuthorSnapshot.data!;
+                          contentText =
+                              'by ${originalAuthor.name}: $contentText';
+                        }
+
+                        final post = Post(
+                          id: postData['\$id'],
+                          author: author,
+                          timestamp:
+                              DateTime.tryParse(postData['timestamp'] ?? '') ??
+                                  DateTime.now(),
+                          contentText: contentText,
+                          stats: PostStats(
+                            likes: postData['likes'] ?? 0,
+                            comments: 0,
+                            shares: 0,
+                            views: 0,
+                          ),
+                        );
+                        return PostItem(post: post, profileId: profileId);
+                      },
+                    );
+                  } else {
+                    final post = Post(
+                      id: postData['\$id'],
+                      author: author,
+                      timestamp: DateTime.tryParse(postData['timestamp'] ?? '') ??
+                          DateTime.now(),
+                      contentText: postData['caption'] ?? '',
+                      stats: PostStats(
+                        likes: postData['likes'] ?? 0,
+                        comments: 0,
+                        shares: 0,
+                        views: 0,
+                      ),
+                    );
+                    return PostItem(post: post, profileId: profileId);
+                  }
                 },
               );
             }

@@ -59,7 +59,7 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
       _profileId = profiles.rows.first.$id;
 
 
-      // 3. Get the list of profiles the current user is following
+      // 3. Get the list of profiles the current user is a member of or is following
       final followingProfiles = await appwriteService.getFollowingProfiles(userId: _profileId!);
       
       // 4. Extract the IDs of the followed profiles
@@ -88,7 +88,6 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
 
       // 7. Map the post data to Post objects
       final posts = postsResponse.rows.map((row) {
-        // Handle array for profile_id
         final profileIdsList = row.data['profile_id'] as List?;
         final postAuthorProfileId = (profileIdsList?.isNotEmpty ?? false) ? profileIdsList!.first as String? : null;
         
@@ -122,7 +121,7 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
         }
 
         String contentText = row.data['caption'] ?? '';
-        final originalAuthorId = row.data['author_id'] as String?;
+        final originalAuthorId = row.data['authoreid'] as String?;
         if (originalAuthorId != null && originalAuthorId != postAuthorProfileId) {
             final originalAuthorProfile = profilesMap[originalAuthorId];
             if (originalAuthorProfile != null) {
@@ -149,7 +148,6 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
         );
       }).whereType<Post>().toList();
 
-      // Sort posts by timestamp, newest first
       posts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       
       if (!mounted) return;
@@ -195,14 +193,12 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
       );
     }
 
-    // Use RefreshIndicator to allow pull-to-refresh
     return RefreshIndicator(
       onRefresh: _fetchFollowingPosts,
       child: ListView.builder(
         itemCount: _posts!.length,
         itemBuilder: (context, index) {
           final post = _posts![index];
-          // Pass the current user's profileId, not the post author's
           return PostItem(post: post, profileId: _profileId ?? '');
         },
       ),
