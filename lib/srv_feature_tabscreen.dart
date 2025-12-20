@@ -24,7 +24,7 @@ class SrvFeatureTabscreen extends StatelessWidget {
     }
 
     return FutureBuilder<List<dynamic>>(
-      future: _getProfiles(context),
+      future: _getCurrentUserProfile(context),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -32,11 +32,10 @@ class SrvFeatureTabscreen extends StatelessWidget {
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
-        if (!snapshot.hasData) {
-          return const Center(child: Text('Could not load profile data.'));
-        }
-        final profiles = snapshot.data as List<dynamic>;
-        final profileId = profiles.isNotEmpty ? profiles[0].$id : '';
+
+        final profiles = snapshot.data;
+        final profileId = (profiles?.isNotEmpty ?? false) ? profiles!.first.$id : '';
+
         return ListView.builder(
           itemCount: featureResults.length,
           itemBuilder: (context, index) {
@@ -44,8 +43,19 @@ class SrvFeatureTabscreen extends StatelessWidget {
             if (item['type'] == 'profile') {
               return _buildProfileResult(context, item['data']);
             } else if (item['type'] == 'post') {
+              final postData = item['data'];
+              if (postData == null) return const SizedBox.shrink();
+
+              final profileIds = postData['profile_id'] as List?;
+              final authorProfileId =
+                  (profileIds?.isNotEmpty ?? false) ? profileIds!.first as String? : null;
+
+              if (authorProfileId == null) {
+                return const SizedBox.shrink(); // Skip if no author
+              }
+
               return FutureBuilder<Profile>(
-                future: _getAuthorProfile(context, item['data']['profile_id']),
+                future: _getAuthorProfile(context, authorProfileId),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const SizedBox.shrink();
@@ -55,12 +65,12 @@ class SrvFeatureTabscreen extends StatelessWidget {
                   }
                   final author = snapshot.data!;
                   final post = Post(
-                    id: item['data']['\$id'],
+                    id: postData['\$id'],
                     author: author,
-                    timestamp: DateTime.tryParse(item['data']['timestamp'] ?? '') ?? DateTime.now(),
-                    contentText: item['data']['caption'] ?? '',
+                    timestamp: DateTime.tryParse(postData['timestamp'] ?? '') ?? DateTime.now(),
+                    contentText: postData['caption'] ?? '',
                     stats: PostStats(
-                      likes: item['data']['likes'] ?? 0,
+                      likes: postData['likes'] ?? 0,
                       comments: 0,
                       shares: 0,
                       views: 0,
@@ -77,9 +87,14 @@ class SrvFeatureTabscreen extends StatelessWidget {
     );
   }
 
-  Future<List<dynamic>> _getProfiles(BuildContext context) {
+  Future<List<dynamic>> _getCurrentUserProfile(BuildContext context) async {
     final appwriteService = context.read<AppwriteService>();
-    return appwriteService.getProfiles().then((value) => value.rows);
+    final user = await appwriteService.getUser();
+    if (user == null) {
+      return [];
+    }
+    final profileDocs = await appwriteService.getUserProfiles(ownerId: user.$id);
+    return profileDocs.rows;
   }
 
   Future<Profile> _getAuthorProfile(BuildContext context, String profileId) {
@@ -95,12 +110,10 @@ class SrvFeatureTabscreen extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundImage:
-              data['profileImageUrl'] != null &&
-                  data['profileImageUrl'].isNotEmpty
-              ? NetworkImage(data['profileImageUrl'])
-              : null,
-          child:
-              data['profileImageUrl'] == null || data['profileImageUrl'].isEmpty
+              data['profileImageUrl'] != null && data['profileImageUrl'].isNotEmpty
+                  ? NetworkImage(data['profileImageUrl'])
+                  : null,
+          child: data['profileImageUrl'] == null || data['profileImageUrl'].isEmpty
               ? const Icon(Icons.person)
               : null,
         ),
