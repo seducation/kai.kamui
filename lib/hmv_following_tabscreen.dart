@@ -3,7 +3,6 @@ import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/model/post.dart';
 import 'package:provider/provider.dart';
 import 'package:appwrite/appwrite.dart';
-import 'package:appwrite/models.dart' as models;
 
 import './widgets/post_item.dart';
 import 'model/profile.dart';
