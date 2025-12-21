@@ -33,6 +33,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
   bool _allowUserEditing = false;
   String? _selectedProfileId;
   bool _allowPostSettings = false;
+  String? _selectedPostSetting;
 
   @override
   void initState() {
@@ -534,34 +535,25 @@ class _AddPostScreenState extends State<AddPostScreen> {
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
-          initialValue: _selectedProfileId,
+          initialValue: _selectedPostSetting,
           decoration: const InputDecoration(
-            labelText: 'Overall Profile ID',
+            labelText: 'Select Setting',
             border: OutlineInputBorder(),
           ),
           onChanged: _allowPostSettings
               ? (String? newValue) {
                   setState(() {
-                    if (newValue != null) {
-                      _selectedProfileId = newValue;
-                    }
+                    _selectedPostSetting = newValue;
                   });
                 }
               : null,
-          items: _profiles.map<DropdownMenuItem<String>>((Profile profile) {
+          items: <String>['NSFW', 'Do not allow to share in different platform', 'Hide Profile']
+              .map<DropdownMenuItem<String>>((String value) {
             return DropdownMenuItem<String>(
-              value: profile.id,
-              child: Text(profile.name),
+              value: value,
+              child: Text(value),
             );
           }).toList(),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          enabled: _allowPostSettings,
-          decoration: const InputDecoration(
-            labelText: 'Add Collaboration',
-            border: OutlineInputBorder(),
-          ),
         ),
       ],
     );
