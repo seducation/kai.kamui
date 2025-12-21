@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:my_app/appwrite_service.dart';
+import 'package:my_app/auth_service.dart';
 import 'package:my_app/model/post.dart';
 import 'package:provider/provider.dart';
-import 'package:appwrite/appwrite.dart';
-
 import './widgets/post_item.dart';
 import 'model/profile.dart';
 
@@ -16,15 +15,16 @@ class HMVFollowingTabscreen extends StatefulWidget {
 
 class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
   late AppwriteService appwriteService;
-  List<Post>? _posts;
+  late AuthService authService;
+  List<Post> _posts = [];
   bool _isLoading = true;
   String? _error;
-  String? _profileId; // This is the current user's active profile ID
 
   @override
   void initState() {
     super.initState();
     appwriteService = context.read<AppwriteService>();
+    authService = context.read<AuthService>();
     _fetchFollowingPosts();
   }
 
@@ -34,42 +34,23 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
       _isLoading = true;
       _error = null;
     });
+
     try {
-      // 1. Get the authenticated user
-      final user = await appwriteService.getUser();
+      final user = await authService.getCurrentUser();
       if (user == null) {
-        if (!mounted) return;
-        setState(() {
-          _error = 'User not authenticated. Please sign in.';
-          _isLoading = false;
-        });
-        return;
+        throw Exception('User not logged in');
       }
 
-      // 2. Get the user's active profile
-      final profiles = await appwriteService.getUserProfiles(ownerId: user.$id);
-      if (profiles.rows.isEmpty) {
-        if (!mounted) return;
-        setState(() {
-          _error = 'No profile found for the current user.';
-          _isLoading = false;
-        });
-        return;
+      final profileResponse =
+          await appwriteService.getUserProfiles(ownerId: user.id);
+      if (profileResponse.rows.isEmpty) {
+        throw Exception('Profile not found');
       }
-      _profileId = profiles.rows.first.$id;
+      final profileData = profileResponse.rows.first.data;
 
-      // 3. Get the list of profiles the current user is a member of or is following
-      final followingProfiles = await appwriteService.getFollowingProfiles(userId: _profileId!);
+      final followingIds = List<String>.from(profileData['following'] ?? []);
 
-      // 4. Extract the IDs of the followed profiles
-      final followedProfileIds = followingProfiles.rows.map((profile) => profile.$id).toList();
-
-      // Also include the user's own posts in their following feed
-      if (!followedProfileIds.contains(_profileId!)) {
-        followedProfileIds.add(_profileId!);
-      }
-
-      if (followedProfileIds.isEmpty) {
+      if (followingIds.isEmpty) {
         if (!mounted) return;
         setState(() {
           _posts = [];
@@ -78,105 +59,133 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
         return;
       }
 
-      // 5. Fetch posts from those users
-      final postsResponse = await appwriteService.getPostsFromUsers(followedProfileIds);
+      final results = await Future.wait([
+        appwriteService.getPostsFromUsers(followingIds),
+        appwriteService.getProfiles(),
+      ]);
 
-      // 6. Fetch all profiles to map authors (can be optimized later)
-      final profilesResponse = await appwriteService.getProfiles();
-      final profilesMap = {for (var p in profilesResponse.rows) p.$id: Profile.fromRow(p)};
+      final postsResponse = results[0];
+      final profilesResponse = results[1];
 
-      // 7. Map the post data to Post objects
+      final profilesMap = {
+        for (var doc in profilesResponse.rows) doc.$id: doc.data
+      };
+
       final posts = postsResponse.rows.map((row) {
-        final profileIdsList = row.data['profile_id'] as List?;
-        final postAuthorProfileId = (profileIdsList?.isNotEmpty ?? false) ? profileIdsList!.first as String? : null;
+        final profileIds = row.data['profile_id'] as List?;
+        final profileId = (profileIds?.isNotEmpty ?? false)
+            ? profileIds!.first as String?
+            : null;
+        if (profileId == null) return null;
 
-        if (postAuthorProfileId == null) return null;
+        final creatorProfileData = profilesMap[profileId];
+        if (creatorProfileData == null) return null;
 
-        final author = profilesMap[postAuthorProfileId];
-
-        if (author == null) {
-          return null; // Skip post if author profile not found
-        }
+        final author = Profile.fromMap(creatorProfileData, profileId);
 
         final updatedAuthor = Profile(
           id: author.id,
           name: author.name,
           type: author.type,
           bio: author.bio,
-          profileImageUrl: author.profileImageUrl != null && author.profileImageUrl!.isNotEmpty
+          profileImageUrl: author.profileImageUrl != null &&
+                  author.profileImageUrl!.isNotEmpty
               ? appwriteService.getFileViewUrl(author.profileImageUrl!)
               : 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
           ownerId: author.ownerId,
           createdAt: author.createdAt,
         );
 
-        PostType type = PostType.text;
+        final fileIdsData = row.data['file_ids'];
+        final List<String> fileIds = fileIdsData is List
+            ? List<String>.from(fileIdsData.map((id) => id.toString()))
+            : [];
+
+        String? postTypeString = row.data['type'];
+        if (postTypeString == null && fileIds.isNotEmpty) {
+          postTypeString = 'image'; // Infer type for old data
+        }
+
+        final postType = _getPostType(postTypeString, row.data['linkUrl']);
+
         String? mediaUrl;
-        final fileIds = row.data['file_ids'] as List?;
-        if (fileIds != null && fileIds.isNotEmpty) {
-          type = PostType.image; // Assuming image for now, could be video
+        if (fileIds.isNotEmpty) {
           mediaUrl = appwriteService.getFileViewUrl(fileIds.first);
         }
 
-        final originalAuthorIds = row.data['author_id'] as List<dynamic>?;
-        final originalAuthorId = (originalAuthorIds?.isNotEmpty ?? false) ? originalAuthorIds!.first as String? : null;
+        final postStats = PostStats(
+          likes: row.data['likes'] ?? 0,
+          comments: row.data['comments'] ?? 0,
+          shares: row.data['shares'] ?? 0,
+          views: row.data['views'] ?? 0,
+        );
+
+        final originalAuthorIds = row.data['author_id'] as List?;
+        final originalAuthorId = (originalAuthorIds?.isNotEmpty ?? false)
+            ? originalAuthorIds!.first as String?
+            : null;
 
         Profile? originalAuthor;
-        if (originalAuthorId != null && originalAuthorId != postAuthorProfileId) {
-          final originalAuthorProfile = profilesMap[originalAuthorId];
-          if (originalAuthorProfile != null) {
-            originalAuthor = originalAuthorProfile;
+        if (originalAuthorId != null && originalAuthorId != profileId) {
+          final originalAuthorProfileData = profilesMap[originalAuthorId];
+          if (originalAuthorProfileData != null) {
+            originalAuthor =
+                Profile.fromMap(originalAuthorProfileData, originalAuthorId);
           }
         }
-        
-        final authorIds = row.data['author_id'] as List<dynamic>?;
-        final profileIds = row.data['profile_id'] as List<dynamic>?;
 
         return Post(
           id: row.$id,
           author: updatedAuthor,
           originalAuthor: originalAuthor,
-          timestamp: DateTime.tryParse(row.data['timestamp'] ?? '') ?? DateTime.now(),
-          linkTitle: row.data['titles'] as String? ?? '',
+          timestamp:
+              DateTime.tryParse(row.data['timestamp'] ?? '') ?? DateTime.now(),
           contentText: row.data['caption'] ?? '',
-          type: type,
           mediaUrl: mediaUrl,
-          linkUrl: row.data['linkUrl'] as String?,
-          stats: PostStats(
-            likes: row.data['likes'] ?? 0,
-            comments: row.data['comments'] ?? 0,
-            shares: row.data['shares'] ?? 0,
-            views: row.data['views'] ?? 0,
-          ),
-          authorIds: authorIds?.map((e) => e as String).toList(),
-          profileIds: profileIds?.map((e) => e as String).toList(),
+          type: postType,
+          stats: postStats,
+          linkUrl: row.data['linkUrl'],
+          linkTitle: row.data['titles'],
+          authorIds: (row.data['author_id'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList(),
+          profileIds: (row.data['profile_id'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList(),
         );
-      }).whereType<Post>().toList();
-
-      posts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      }).where((post) => post != null).cast<Post>().toList();
 
       if (!mounted) return;
       setState(() {
         _posts = posts;
         _isLoading = false;
       });
-    } on AppwriteException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.message ?? 'An Appwrite error occurred.';
-        _isLoading = false;
-      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'An unexpected error occurred: $e';
+        _error = 'An error occurred: $e';
         _isLoading = false;
       });
     }
   }
 
+  PostType _getPostType(String? type, String? linkUrl) {
+    if (linkUrl != null && linkUrl.isNotEmpty) {
+      return PostType.linkPreview;
+    }
+    switch (type) {
+      case 'image':
+        return PostType.image;
+      case 'video':
+        return PostType.video;
+      default:
+        return PostType.text;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final authService = context.watch<AuthService>();
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(),
@@ -192,19 +201,20 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
       );
     }
 
-    if (_posts == null || _posts!.isEmpty) {
+    if (_posts.isEmpty) {
       return const Center(
-        child: Text('No posts yet. Follow some people to see their posts here.'),
+        child:
+            Text('No posts yet. Follow some people to see their posts here.'),
       );
     }
 
     return RefreshIndicator(
       onRefresh: _fetchFollowingPosts,
       child: ListView.builder(
-        itemCount: _posts!.length,
+        itemCount: _posts.length,
         itemBuilder: (context, index) {
-          final post = _posts![index];
-          return PostItem(post: post, profileId: _profileId ?? '');
+          final post = _posts[index];
+          return PostItem(post: post, profileId: authService.currentUser!.id);
         },
       ),
     );
