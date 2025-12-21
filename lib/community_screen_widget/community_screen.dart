@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'hero_banner.dart';
 import 'status_rail_section.dart';
 import 'product_grid.dart';
@@ -35,6 +36,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text("myapps", style: TextStyle(fontSize: 22)),
+        actions: const [
+          PersistentChip(),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -71,5 +75,77 @@ class _CommunityScreenState extends State<CommunityScreen> {
         ),
       ),
     );
+  }
+}
+
+class PersistentChip extends StatefulWidget {
+  const PersistentChip({super.key});
+
+  @override
+  State<PersistentChip> createState() => _PersistentChipState();
+}
+
+class _PersistentChipState extends State<PersistentChip> {
+  final TextEditingController _textController = TextEditingController();
+  String _chipText = '';
+  bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadChipText();
+  }
+
+  Future<void> _loadChipText() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _chipText = prefs.getString('chipText') ?? 'Your Text';
+      _textController.text = _chipText;
+    });
+  }
+
+  Future<void> _saveChipText(String text) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('chipText', text);
+    setState(() {
+      _chipText = text;
+      _isEditing = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isEditing) {
+      return SizedBox(
+        width: 150,
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _textController,
+                autofocus: true,
+                onSubmitted: _saveChipText,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: () => _saveChipText(_textController.text),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return InkWell(
+        onTap: () {
+          setState(() {
+            _isEditing = true;
+          });
+        },
+        child: Chip(
+          label: Text(_chipText),
+          avatar: const Icon(Icons.edit),
+        ),
+      );
+    }
   }
 }
