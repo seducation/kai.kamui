@@ -4,6 +4,7 @@ import 'package:appwrite/models.dart' as models;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/appwrite_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SearchScreen extends StatefulWidget {
   final String? query;
@@ -20,10 +21,12 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounce;
   List<models.Row> _suggestions = [];
   bool _isLoading = false;
+  List<String> _searchHistory = [];
 
   @override
   void initState() {
     super.initState();
+    _loadSearchHistory();
     if (widget.query != null) {
       _searchController.text = widget.query!;
     }
@@ -36,6 +39,18 @@ class _SearchScreenState extends State<SearchScreen> {
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadSearchHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _searchHistory = prefs.getStringList('search_history') ?? [];
+    });
+  }
+
+  Future<void> _saveSearchHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('search_history', _searchHistory);
   }
 
   void _onSearchChanged() {
@@ -62,6 +77,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _suggestions = results.rows;
         _isLoading = false;
       });
+      _addToHistory(query);
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -74,8 +90,21 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  void _addToHistory(String query) {
+    if (!_searchHistory.contains(query)) {
+      setState(() {
+        _searchHistory.insert(0, query);
+        if (_searchHistory.length > 10) {
+          _searchHistory.removeLast();
+        }
+      });
+      _saveSearchHistory();
+    }
+  }
+
   void _submitSearch(String query) {
     if (query.isNotEmpty) {
+      _addToHistory(query);
       context.push('/search/$query');
     }
   }
@@ -89,7 +118,10 @@ class _SearchScreenState extends State<SearchScreen> {
           children: [
             _buildSearchBar(context),
             Divider(height: 1, color: theme.dividerColor),
-            Expanded(child: _buildSuggestionsList()),
+            Expanded(
+                child: _searchController.text.isEmpty
+                    ? _buildHistoryList()
+                    : _buildSuggestionsList()),
           ],
         ),
       ),
@@ -165,12 +197,6 @@ class _SearchScreenState extends State<SearchScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_searchController.text.isEmpty) {
-      return const Center(
-        child: Text('Enter a search term to see suggestions.'),
-      );
-    }
-
     if (_suggestions.isEmpty) {
       return const Center(child: Text('No suggestions found.'));
     }
@@ -179,6 +205,28 @@ class _SearchScreenState extends State<SearchScreen> {
       itemCount: _suggestions.length,
       itemBuilder: (context, index) {
         return _buildSuggestionItem(_suggestions[index]);
+      },
+    );
+  }
+
+  Widget _buildHistoryList() {
+    if (_searchHistory.isEmpty) {
+      return const Center(
+        child: Text('No recent searches.'),
+      );
+    }
+    return ListView.builder(
+      itemCount: _searchHistory.length,
+      itemBuilder: (context, index) {
+        final query = _searchHistory[index];
+        return ListTile(
+          leading: const Icon(Icons.history),
+          title: Text(query),
+          onTap: () {
+            _searchController.text = query;
+            _submitSearch(query);
+          },
+        );
       },
     );
   }
