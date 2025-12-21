@@ -33,7 +33,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
   bool _allowUserEditing = false;
   String? _selectedProfileId;
   bool _allowPostSettings = false;
-  String? _selectedPostSetting;
+  final List<String> _selectedPostSettings = [];
 
   @override
   void initState() {
@@ -148,6 +148,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
         }),
         'file_ids': uploadedFileIds,
         'profile_id': _selectedProfileId,
+        'post_settings': _selectedPostSettings,
       };
 
       if (_allowUserEditing && _selectedProfileId != null) {
@@ -516,6 +517,12 @@ class _AddPostScreenState extends State<AddPostScreen> {
   }
 
   Widget _buildPostSettingsSection() {
+    final List<String> postSettingOptions = [
+      'NSFW',
+      'Do not allow to share in different platform',
+      'Hide Profile'
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -533,28 +540,45 @@ class _AddPostScreenState extends State<AddPostScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        DropdownButtonFormField<String>(
-          initialValue: _selectedPostSetting,
-          decoration: const InputDecoration(
-            labelText: 'Select Setting',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: _allowPostSettings
-              ? (String? newValue) {
+        if (_allowPostSettings) ...[
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 4.0,
+            children: _selectedPostSettings.map((setting) {
+              return InputChip(
+                label: Text(setting),
+                onDeleted: () {
                   setState(() {
-                    _selectedPostSetting = newValue;
+                    _selectedPostSettings.remove(setting);
                   });
-                }
-              : null,
-          items: <String>['NSFW', 'Do not allow to share in different platform', 'Hide Profile']
-              .map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-        ),
+                },
+              );
+            }).toList(),
+          ),
+          if (_selectedPostSettings.isNotEmpty) const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            hint: const Text('Select Setting'),
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (String? newValue) {
+              if (newValue != null && !_selectedPostSettings.contains(newValue)) {
+                setState(() {
+                  _selectedPostSettings.add(newValue);
+                });
+              }
+            },
+            items: postSettingOptions
+                .where((option) => !_selectedPostSettings.contains(option))
+                .map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+          ),
+        ]
       ],
     );
   }
