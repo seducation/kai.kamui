@@ -755,6 +755,7 @@ class AppwriteService {
     required String mediaUrl,
     required String mediaType,
     String? caption,
+    String? location,
   }) async {
     final user = await getUser();
     if (user == null) {
@@ -774,6 +775,7 @@ class AppwriteService {
             .add(const Duration(hours: 24))
             .toIso8601String(),
         if (caption != null) 'caption': caption,
+        if (location != null) 'location': location,
       },
       permissions: [
         Permission.read(Role.any()),

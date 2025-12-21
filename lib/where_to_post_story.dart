@@ -85,6 +85,7 @@ class _WhereToPostStoryScreenState extends State<WhereToPostStoryScreen> {
           mediaUrl: widget.storyData['mediaUrl']!,
           mediaType: widget.storyData['mediaType']!,
           caption: widget.storyData['caption'],
+          location: widget.storyData['location'],
         );
       });
 

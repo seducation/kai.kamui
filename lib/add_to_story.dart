@@ -17,6 +17,7 @@ class _AddToStoryScreenState extends State<AddToStoryScreen> {
   final ImagePicker _picker = ImagePicker();
   XFile? _imageFile;
   final TextEditingController _captionController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
   bool _isUploading = false;
 
   Future<void> _pickImage() async {
@@ -56,6 +57,7 @@ class _AddToStoryScreenState extends State<AddToStoryScreen> {
         'mediaUrl': mediaUrl,
         'mediaType': 'image',
         'caption': _captionController.text,
+        'location': _locationController.text,
       };
 
       if (mounted) {
@@ -114,6 +116,16 @@ class _AddToStoryScreenState extends State<AddToStoryScreen> {
               controller: _captionController,
               decoration: const InputDecoration(
                 hintText: 'Add a caption...',
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: TextField(
+              controller: _locationController,
+              decoration: const InputDecoration(
+                hintText: 'Add a location...',
                 border: InputBorder.none,
               ),
             ),

@@ -7,6 +7,7 @@ class Story {
   final String mediaType;
   final DateTime expiresAt;
   final String? caption;
+  final String? location;
 
   Story({
     required this.id,
@@ -15,6 +16,7 @@ class Story {
     required this.mediaType,
     required this.expiresAt,
     this.caption,
+    this.location,
   });
 
   factory Story.fromRow(Row row) {
@@ -25,6 +27,7 @@ class Story {
       mediaType: row.data['mediaType'],
       expiresAt: DateTime.parse(row.data['expiresAt']),
       caption: row.data['caption'],
+      location: row.data['location'],
     );
   }
 }
