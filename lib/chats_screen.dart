@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/add_post_screen.dart';
+import 'package:my_app/appwrite_service.dart';
+import 'package:my_app/profile_screen.dart';
+import 'package:my_app/search_screen.dart';
 import 'package:my_app/select_contact_screen.dart';
 import 'package:my_app/cnm_calls_tabscreen.dart';
 import 'package:my_app/cnm_chats_tabscreen.dart';
@@ -6,6 +10,7 @@ import 'package:my_app/cnm_reply_tabscreen.dart';
 import 'package:my_app/model/chat_model.dart';
 import 'package:my_app/cnm_notifications_tabscreen.dart';
 import 'package:my_app/cnm_updates_tabscreen.dart';
+import 'package:provider/provider.dart';
 
 class ChatsScreen extends StatefulWidget {
   const ChatsScreen({super.key});
@@ -66,6 +71,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appwriteService = context.read<AppwriteService>();
     return DefaultTabController(
       length: 5,
       initialIndex: 2,
@@ -73,16 +79,32 @@ class _ChatsScreenState extends State<ChatsScreen> {
         appBar: AppBar(
           leading: Row(
             children: [
-              Expanded(
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
                 child: IconButton(
                   icon: const Icon(Icons.menu),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const ProfileScreen()),
+                    );
+                  },
                 ),
               ),
-              Expanded(
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
                 child: IconButton(
                   icon: const Icon(Icons.search),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SearchScreen(appwriteService: appwriteService),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -90,7 +112,16 @@ class _ChatsScreenState extends State<ChatsScreen> {
           title: const Text("gvone"),
           centerTitle: true,
           actions: [
-            IconButton(icon: const Icon(Icons.add), onPressed: () {}),
+            IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddPostScreen(),
+                    ),
+                  );
+                }),
             IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
           ],
           bottom: const TabBar(
