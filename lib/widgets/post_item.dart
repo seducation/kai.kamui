@@ -4,6 +4,7 @@ import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/comments_screen.dart';
 import 'package:my_app/model/post.dart';
 import 'package:my_app/profile_page.dart';
+import 'package:my_app/widgets/post_options_menu.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -368,7 +369,7 @@ class _PostItemState extends State<PostItem> {
                 ],
               ),
             ),
-            Icon(Icons.more_horiz, color: handleColor, size: 22),
+            PostOptionsMenu(post: widget.post, profileId: widget.profileId),
           ],
         ),
       ),
