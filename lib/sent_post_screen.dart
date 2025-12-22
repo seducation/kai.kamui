@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/model/profile.dart';
-import 'package:my_app/one_time_message_screen.dart';
 import 'package:provider/provider.dart';
 
 class SentPostScreen extends StatelessWidget {
@@ -75,15 +74,20 @@ class _OTMTabState extends State<OTMTab> {
   Future<void> _loadFollowingContacts() async {
     try {
       final currentUser = await _appwriteService.getUser();
-      if (currentUser != null) {
-        final profiles = await _appwriteService.getFollowingProfiles(userId: currentUser.$id);
-        setState(() {
-          _contacts = profiles.rows.map((doc) => Profile.fromMap(doc.data, doc.$id)).toList();
-          _isLoading = false;
-        });
+      if (currentUser == null) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        return;
       }
+      final profiles = await _appwriteService.getFollowingProfiles(userId: currentUser.$id);
+      if (!mounted) return;
+      setState(() {
+        _contacts = profiles.rows.map((doc) => Profile.fromMap(doc.data, doc.$id)).toList();
+        _isLoading = false;
+      });
     } catch (e) {
-      // Handle error
+      if (!mounted) return;
+      setState(() => _isLoading = false);
     }
   }
 
@@ -96,11 +100,13 @@ class _OTMTabState extends State<OTMTab> {
           receiverId: contact.id,
           imagePath: imagePath,
         );
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('One-time message sent!')),
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to send message: $e')),
       );

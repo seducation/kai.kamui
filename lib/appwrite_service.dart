@@ -338,11 +338,39 @@ class AppwriteService {
         bytes: await File(imagePath).readAsBytes(),
         filename: imagePath.split('/').last);
 
-    await sendMessage(
-        senderId: senderId,
-        receiverId: receiverId,
-        message: getFileViewUrl(file.$id),
-       );
+    final chatId = _getChatId(senderId, receiverId);
+
+    await _db.createRow(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: messagesCollection,
+      rowId: ID.unique(),
+      data: {
+        'chatId': chatId,
+        'senderId': senderId,
+        'message': getFileViewUrl(file.$id),
+        'isOtm': true,
+        'fileId': file.$id,
+      },
+       permissions: [
+          Permission.read(Role.user(senderId)),
+          Permission.update(Role.user(senderId)),
+          Permission.delete(Role.user(senderId)),
+          Permission.read(Role.user(receiverId)),
+        ],
+    );
+  }
+
+  Future<void> deleteMessage(String messageId) async {
+    await _db.deleteRow(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: messagesCollection,
+      rowId: messageId,
+    );
+  }
+
+  Future<void> deleteFile(String fileId) async {
+    await _storage.deleteFile(
+        bucketId: Environment.appwriteStorageBucketId, fileId: fileId);
   }
 
   Future<models.RowList> getMessages({

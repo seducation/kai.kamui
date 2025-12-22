@@ -90,7 +90,7 @@ class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
             message: message.data['message'] as String,
             time: message.$createdAt,
             imgPath: mainProfile.data['profileImageUrl'] as String,
-            hasStory: false,
+            hasStory: message.data['isOtm'] ?? false,
             messageCount: 0,
           );
         } else {
@@ -115,21 +115,41 @@ class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
     }
   }
 
-  String _getChatId(String userId1, String userId2) {
+    String _getChatId(String userId1, String userId2) {
     final ids = [userId1, userId2]..sort();
     return ids.join('_');
   }
 
-  void _viewStory(BuildContext context, int index) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => OneTimeMessageScreen(
-          message: "This is a one-time message from ${_chatItems[index].name}",
-          onStoryViewed: () {},
+
+  void _viewStory(int index) async {
+    final chat = _chatItems[index];
+    if (chat.hasStory) {
+      final user = await appwrite.getUser();
+      if (user == null) return;
+      final messages = await appwrite.getMessages(
+        userId1: user.$id,
+        userId2: chat.userId,
+      );
+      final otmMessages = messages.rows.where((m) => m.data['isOtm'] == true);
+
+      if (otmMessages.isEmpty) {
+        _getConversations();
+        return;
+      }
+
+      final otmMessage = otmMessages.first;
+
+      if (!mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OneTimeMessageScreen(
+            message: otmMessage,
+          ),
         ),
-      ),
-    );
+      ).then((_) => _getConversations());
+    }
   }
 
   @override
@@ -142,7 +162,7 @@ class _CNMChatsTabscreenState extends State<CNMChatsTabscreen> {
                 SliverToBoxAdapter(
                   child: StatusBar(
                       chatItems: _chatItems,
-                      onViewStory: (index) => _viewStory(context, index)),
+                      onViewStory: (index) => _viewStory(index)),
                 ),
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
@@ -269,7 +289,7 @@ class ChatListItem extends StatelessWidget {
         children: [
           Text(chat.time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 5),
-          if (chat.messageCount != null && chat.messageCount! > 0)
+          if (chat.messageCount != null && chat.messageCount! > .0)
             Container(
               padding: const EdgeInsets.all(6),
               decoration: const BoxDecoration(
