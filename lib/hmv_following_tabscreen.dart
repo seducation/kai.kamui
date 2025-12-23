@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/appwrite_service.dart';
-import 'package:my_app/auth_service.dart';
 import 'package:my_app/following/following_algorithm.dart';
 import 'package:my_app/model/post.dart';
 import 'package:provider/provider.dart';
-import './widgets/post_item.dart';
+import 'package:my_app/appwrite_service.dart';
+import 'package:my_app/auth_service.dart';
+import 'widgets/post_item.dart';
 
 class HMVFollowingTabscreen extends StatefulWidget {
   const HMVFollowingTabscreen({super.key});
@@ -16,6 +16,7 @@ class HMVFollowingTabscreen extends StatefulWidget {
 class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
   late FollowingAlgorithm _followingAlgorithm;
   List<Post> _posts = [];
+  String? _userProfileId;
   bool _isLoading = true;
   String? _error;
 
@@ -39,10 +40,11 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
     });
 
     try {
-      final posts = await _followingAlgorithm.fetchFollowingPosts();
+      final result = await _followingAlgorithm.fetchFollowingPosts();
       if (!mounted) return;
       setState(() {
-        _posts = posts;
+        _posts = result.posts;
+        _userProfileId = result.userProfileId;
         _isLoading = false;
       });
     } catch (e) {
@@ -56,7 +58,6 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = context.watch<AuthService>();
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(),
@@ -85,7 +86,7 @@ class _HMVFollowingTabscreenState extends State<HMVFollowingTabscreen> {
         itemCount: _posts.length,
         itemBuilder: (context, index) {
           final post = _posts[index];
-          return PostItem(post: post, profileId: authService.currentUser!.id);
+          return PostItem(post: post, profileId: _userProfileId!);
         },
       ),
     );

@@ -3,13 +3,20 @@ import 'package:my_app/auth_service.dart';
 import 'package:my_app/model/post.dart';
 import 'package:my_app/model/profile.dart';
 
+class FollowingFeedResult {
+  final List<Post> posts;
+  final String userProfileId;
+
+  FollowingFeedResult({required this.posts, required this.userProfileId});
+}
+
 class FollowingAlgorithm {
   final AppwriteService appwriteService;
   final AuthService authService;
 
   FollowingAlgorithm({required this.appwriteService, required this.authService});
 
-  Future<List<Post>> fetchFollowingPosts() async {
+  Future<FollowingFeedResult> fetchFollowingPosts() async {
     final user = await authService.getCurrentUser();
     if (user == null) {
       throw Exception('User not logged in');
@@ -21,11 +28,12 @@ class FollowingAlgorithm {
       throw Exception('Profile not found');
     }
     final profileData = profileResponse.rows.first.data;
+    final userProfileId = profileResponse.rows.first.$id;
 
     final followingIds = List<String>.from(profileData['following'] ?? []);
 
     if (followingIds.isEmpty) {
-      return [];
+      return FollowingFeedResult(posts: [], userProfileId: userProfileId);
     }
 
     final results = await Future.wait([
@@ -124,7 +132,7 @@ class FollowingAlgorithm {
       );
     }).where((post) => post != null).cast<Post>().toList();
 
-    return posts;
+    return FollowingFeedResult(posts: posts, userProfileId: userProfileId);
   }
 
   PostType _getPostType(String? type, String? linkUrl) {
