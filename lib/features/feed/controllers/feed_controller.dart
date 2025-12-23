@@ -11,6 +11,7 @@ class FeedController extends ChangeNotifier {
   final Functions _functions;
   final TablesDB _databases;
   final String _userId;
+  final String _postType;
 
   final List<FeedItem> _feedItems = [];
   bool _isLoading = false;
@@ -19,10 +20,14 @@ class FeedController extends ChangeNotifier {
   int _offset = 0;
   String? _error;
 
-  FeedController({required Client client, required String userId})
-    : _functions = Functions(client),
-      _databases = TablesDB(client),
-      _userId = userId {
+  FeedController({
+    required Client client,
+    required String userId,
+    String postType = 'all', // Add postType parameter with a default value
+  })  : _functions = Functions(client),
+        _databases = TablesDB(client),
+        _userId = userId,
+        _postType = postType {
     _sessionId = const Uuid().v4(); // Generate unique session ID
     loadFeed();
   }
@@ -50,6 +55,7 @@ class FeedController extends ChangeNotifier {
           'sessionId': _sessionId,
           'offset': _offset,
           'limit': 20,
+          'postType': _postType,
         }),
       );
 

@@ -11,16 +11,14 @@ import 'features/feed/widgets/post_card.dart';
 import 'features/feed/widgets/ad_card.dart';
 import 'features/feed/widgets/carousel_widget.dart';
 
-/// Main feed screen (HMV Feature Tab)
-/// This is the primary social media feed using the advanced ranking algorithm
-class HmvFeatureTabScreen extends StatefulWidget {
-  const HmvFeatureTabScreen({super.key});
+class HmvVideoTabScreen extends StatefulWidget {
+  const HmvVideoTabScreen({super.key});
 
   @override
-  State<HmvFeatureTabScreen> createState() => _HmvFeatureTabScreenState();
+  State<HmvVideoTabScreen> createState() => _HmvVideoTabScreenState();
 }
 
-class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
+class _HmvVideoTabScreenState extends State<HmvVideoTabScreen> {
   late FeedController _controller;
   final ScrollController _scrollController = ScrollController();
 
@@ -28,19 +26,16 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
   void initState() {
     super.initState();
 
-    // Initialize feed controller without postType, so it defaults to 'all'
     _controller = FeedController(
       client: context.read<Client>(),
-      userId: context
-          .read<String>(), // Replace with actual user ID provider if available
+      userId: context.read<String>(),
+      postType: 'video',
     );
 
-    // Add scroll listener for pagination
     _scrollController.addListener(_onScroll);
   }
 
   void _onScroll() {
-    // Trigger pagination when user scrolls to 80% of content
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent * 0.8) {
       _controller.loadFeed();
@@ -60,19 +55,16 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
       value: _controller,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Feed'),
+          title: const Text('Videos'),
           actions: [
             IconButton(
               icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                // Navigate to notifications
-              },
+              onPressed: () {},
             ),
           ],
         ),
         body: Consumer<FeedController>(
           builder: (context, controller, child) {
-            // Error state
             if (controller.error != null && controller.feedItems.isEmpty) {
               return Center(
                 child: Column(
@@ -85,7 +77,7 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Failed to load feed',
+                      'Failed to load videos',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
@@ -104,25 +96,24 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
               );
             }
 
-            // Empty state (initial load)
             if (!controller.isLoading && controller.feedItems.isEmpty) {
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(
-                      Icons.feed_outlined,
+                      Icons.video_library_outlined,
                       size: 64,
                       color: Colors.grey,
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No posts yet',
+                      'No videos yet',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Follow some users to see their posts',
+                      'Follow users to see their videos',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                   ],
@@ -130,16 +121,13 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
               );
             }
 
-            // Feed list
             return RefreshIndicator(
               onRefresh: () => controller.refresh(),
               child: ListView.builder(
                 controller: _scrollController,
                 itemCount:
-                    controller.feedItems.length +
-                    (controller.isLoading ? 1 : 0),
+                    controller.feedItems.length + (controller.isLoading ? 1 : 0),
                 itemBuilder: (context, index) {
-                  // Loading indicator at bottom
                   if (index >= controller.feedItems.length) {
                     return const Padding(
                       padding: EdgeInsets.all(16.0),
@@ -148,8 +136,6 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
                   }
 
                   final item = controller.feedItems[index];
-
-                  // Render appropriate widget based on type
                   return _buildFeedItem(item, controller);
                 },
               ),
@@ -160,7 +146,6 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
     );
   }
 
-  /// Build appropriate widget for each feed item type
   Widget _buildFeedItem(FeedItem item, FeedController controller) {
     switch (item.type) {
       case 'post':
@@ -168,23 +153,18 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
           post: item as PostItem,
           controller: controller,
           onTap: () {
-            // Navigate to post detail
             // Navigator.push(context, MaterialPageRoute(builder: (_) => PostDetailScreen(post: item)));
           },
         );
-
       case 'ad':
         return AdCard(ad: item as AdItem, controller: controller);
-
       case 'carousel':
         return CarouselWidget(
           carousel: item as CarouselItem,
           onItemTap: (itemId) {
-            // Handle carousel item tap
             // Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(userId: itemId)));
           },
         );
-
       default:
         return const SizedBox.shrink();
     }

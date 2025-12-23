@@ -30,7 +30,7 @@ const { getSeenPostIds, recordSeenPosts } = require('./utils/deduplication');
 module.exports = async ({ req, res, log, error }) => {
     try {
         // Parse request data
-        const { sessionId, offset = 0, limit = FEED.DEFAULT_LIMIT } = JSON.parse(req.body || '{}');
+        const { sessionId, offset = 0, limit = FEED.DEFAULT_LIMIT, postType = 'all' } = JSON.parse(req.body || '{}');
 
         // Initialize Appwrite client
         const client = new Client()
@@ -46,7 +46,7 @@ module.exports = async ({ req, res, log, error }) => {
             return res.json({ error: 'Unauthorized' }, 401);
         }
 
-        log(`Generating feed for user: ${userId}, session: ${sessionId}`);
+        log(`Generating feed for user: ${userId}, session: ${sessionId}, postType: ${postType}`);
 
         // Validate pagination parameters
         const safeOffset = Math.max(0, parseInt(offset) || 0);
@@ -81,32 +81,41 @@ module.exports = async ({ req, res, log, error }) => {
         // Step 4: Determine if cold start (new user)
         const isColdStart = user.followingCount < 5;
 
+        // Create a base query for postType if it's not 'all'
+        const postTypeQueries = [];
+        if (postType && postType !== 'all') {
+            postTypeQueries.push(Query.equal('postType', postType));
+        }
+
         // Step 5: Generate candidates from multiple pools (in parallel)
         log('Fetching candidates from multiple pools...');
 
-        const [
-            followedPosts,
-            interestPosts,
-            trendingPosts,
-            freshPosts,
-            viralPosts,
-            explorationPosts
+        const [ 
+            followedPosts, 
+            interestPosts, 
+            trendingPosts, 
+            freshPosts, 
+            viralPosts, 
+            explorationPosts 
         ] = await Promise.all([
-            isColdStart ? Promise.resolve([]) : getFollowedPosts(databases, userId, POOL_SIZES.FOLLOWED),
+            isColdStart ? Promise.resolve([]) : getFollowedPosts(databases, userId, POOL_SIZES.FOLLOWED, ...postTypeQueries),
             getInterestBasedPosts(
                 databases,
                 user.interests || [],
-                isColdStart ? COLD_START_POOL_SIZES.INTEREST : POOL_SIZES.INTEREST
+                isColdStart ? COLD_START_POOL_SIZES.INTEREST : POOL_SIZES.INTEREST,
+                ...postTypeQueries
             ),
             getTrendingPosts(
                 databases,
-                isColdStart ? COLD_START_POOL_SIZES.TRENDING : POOL_SIZES.TRENDING
+                isColdStart ? COLD_START_POOL_SIZES.TRENDING : POOL_SIZES.TRENDING,
+                ...postTypeQueries
             ),
-            getFreshPosts(databases, POOL_SIZES.FRESH),
-            getViralPosts(databases, POOL_SIZES.VIRAL),
+            getFreshPosts(databases, POOL_SIZES.FRESH, ...postTypeQueries),
+            getViralPosts(databases, POOL_SIZES.VIRAL, ...postTypeQueries),
             getExplorationPosts(
                 databases,
-                isColdStart ? COLD_START_POOL_SIZES.EXPLORATION : POOL_SIZES.EXPLORATION
+                isColdStart ? COLD_START_POOL_SIZES.EXPLORATION : POOL_SIZES.EXPLORATION,
+                ...postTypeQueries
             )
         ]);
 
