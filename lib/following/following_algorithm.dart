@@ -15,14 +15,9 @@ class FollowingAlgorithm {
       throw Exception('User not logged in');
     }
 
-    final profileResponse =
-        await appwriteService.getUserProfiles(ownerId: user.id);
-    if (profileResponse.rows.isEmpty) {
-      throw Exception('Profile not found');
-    }
-    final profileData = profileResponse.rows.first.data;
-
-    final followingIds = List<String>.from(profileData['following'] ?? []);
+    final followingProfilesResponse =
+        await appwriteService.getFollowingProfiles(userId: user.id);
+    final followingIds = followingProfilesResponse.rows.map((doc) => doc.$id).toList();
 
     if (followingIds.isEmpty) {
       return [];
