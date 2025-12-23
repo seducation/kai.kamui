@@ -1,0 +1,14 @@
+{
+    "name": "generate-feed",
+    "version": "1.0.0",
+    "description": "Advanced social media feed generation with ranking, ads, and carousels",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "dependencies": {
+        "node-appwrite": "^11.0.0"
+    },
+    "author": "",
+    "license": "MIT"
+}
