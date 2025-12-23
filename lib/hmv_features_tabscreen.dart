@@ -78,27 +78,17 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
         }
 
         final profileIdsList = row.data['profile_id'] as List?;
-        final primaryProfileId =
-            (profileIdsList?.isNotEmpty ?? false)
-                ? profileIdsList!.first as String?
-                : null;
+        final authorProfileId =
+            (profileIdsList?.isNotEmpty ?? false) ? profileIdsList!.first as String? : null;
 
-        final authorIdsList = row.data['author_id'] as List?;
-        final originalAuthorId =
-            (authorIdsList?.isNotEmpty ?? false)
-                ? authorIdsList!.first as String?
-                : null;
-
-        final mainAuthorId = primaryProfileId ?? originalAuthorId;
-
-        if (mainAuthorId == null) {
-           debugPrint('HMVFeaturesTabscreen: Post ${row.$id} filtered. No author or profile ID.');
+        if (authorProfileId == null) {
+          debugPrint('HMVFeaturesTabscreen: Post ${row.$id} filtered. No profile_id.');
           return null;
         }
 
-        final author = profilesMap[mainAuthorId];
+        final author = profilesMap[authorProfileId];
         if (author == null) {
-          debugPrint('HMVFeaturesTabscreen: Post ${row.$id} filtered. Profile for ID $mainAuthorId not found in profilesMap.');
+          debugPrint('HMVFeaturesTabscreen: Post ${row.$id} filtered. Author profile for ID $authorProfileId not found.');
           return null;
         }
 
@@ -114,11 +104,26 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
             ownerId: author.ownerId,
             createdAt: author.createdAt);
 
+        final authorIdsList = row.data['author_id'] as List?;
+        final originalAuthorId =
+            (authorIdsList?.isNotEmpty ?? false) ? authorIdsList!.first as String? : null;
+
         Profile? finalOriginalAuthor;
-        if (primaryProfileId != null &&
-            originalAuthorId != null &&
-            primaryProfileId != originalAuthorId) {
-          finalOriginalAuthor = profilesMap[originalAuthorId];
+        if (originalAuthorId != null && originalAuthorId != authorProfileId) {
+          final originalAuthorProfile = profilesMap[originalAuthorId];
+          if (originalAuthorProfile != null) {
+              finalOriginalAuthor = Profile(
+                id: originalAuthorProfile.id,
+                name: originalAuthorProfile.name,
+                type: originalAuthorProfile.type,
+                bio: originalAuthorProfile.bio,
+                profileImageUrl:
+                    originalAuthorProfile.profileImageUrl != null && originalAuthorProfile.profileImageUrl!.isNotEmpty
+                        ? _appwriteService.getFileViewUrl(originalAuthorProfile.profileImageUrl!)
+                        : 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
+                ownerId: originalAuthorProfile.ownerId,
+                createdAt: originalAuthorProfile.createdAt);
+          }
         }
 
         final fileIdsData = row.data['file_ids'];
