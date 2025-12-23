@@ -72,25 +72,31 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
       };
 
       final posts = postsResponse.rows.map((row) {
+        debugPrint('HMVFeaturesTabscreen: Processing post ${row.$id}');
         final isHidden = row.data['isHidden'] as bool? ?? false;
         if (isHidden) {
+          debugPrint('HMVFeaturesTabscreen: Post ${row.$id} is hidden.');
           return null;
         }
-        
+
         final profileIds = row.data['profile_id'] as List?;
-        final profileId = (profileIds?.isNotEmpty ?? false)
-            ? profileIds!.first as String?
-            : null;
+        if (profileIds == null || profileIds.isEmpty) {
+            debugPrint('HMVFeaturesTabscreen: Post ${row.$id} filtered. profile_id list is null or empty.');
+            return null;
+        }
+        final profileId = profileIds.first as String?;
         if (profileId == null) {
-            debugPrint('HMVFeaturesTabscreen: Post ${row.$id} filtered. No profile_id.');
+            debugPrint('HMVFeaturesTabscreen: Post ${row.$id} filtered. First profile_id in list is null.');
             return null;
         }
 
         final creatorProfileData = profilesMap[profileId];
         if (creatorProfileData == null) {
-            debugPrint('HMVFeaturesTabscreen: Post ${row.$id} filtered. Author profile for ID $profileId not found.');
+            debugPrint('HMVFeaturesTabscreen: Post ${row.$id} filtered. Author profile for ID $profileId not found in profilesMap. profilesMap keys: ${profilesMap.keys.toList()}');
             return null;
         }
+        
+        debugPrint('HMVFeaturesTabscreen: Post ${row.$id} passed all checks. Creating Post object.');
 
         final author = Profile.fromMap(creatorProfileData, profileId);
 
@@ -167,6 +173,8 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
               .toList(),
         );
       }).whereType<Post>().toList();
+      
+      debugPrint('HMVFeaturesTabscreen: Finished mapping. Found ${posts.length} valid posts.');
 
       if (!mounted) return;
 
