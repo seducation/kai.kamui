@@ -32,8 +32,10 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
   @override
   void initState() {
     super.initState();
-    _appwriteService = context.read<AppwriteService>();
-    _fetchData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appwriteService = context.read<AppwriteService>();
+      _fetchData();
+    });
   }
 
   Future<void> _fetchData() async {

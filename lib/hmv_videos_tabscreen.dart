@@ -21,18 +21,25 @@ class HmvVideosTabScreen extends StatefulWidget {
 class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
   late FeedController _controller;
   final ScrollController _scrollController = ScrollController();
+  bool _isControllerInitialized = false;
 
   @override
   void initState() {
     super.initState();
-
-    _controller = FeedController(
-      client: context.read<Client>(),
-      userId: context.read<String>(),
-      postType: 'video',
-    );
-
     _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isControllerInitialized) {
+      _controller = FeedController(
+        client: context.read<Client>(),
+        userId: context.read<String>(),
+        postType: 'video',
+      );
+      _isControllerInitialized = true;
+    }
   }
 
   void _onScroll() {
@@ -45,12 +52,17 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _controller.dispose();
+    if (_isControllerInitialized) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_isControllerInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return ChangeNotifierProvider.value(
       value: _controller,
       child: Scaffold(
