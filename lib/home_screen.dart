@@ -222,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         } else if (name == 'feature') {
           return const HMVFeaturesTabscreen();
         } else if (name == 'videos') {
-          return const HMVVideosTabscreen();
+          return const HmvVideosTabScreen();
         } else if (name == 'news') {
           return const HMVNewsTabscreen();
         } else if (name == 'following') {

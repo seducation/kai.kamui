@@ -1,123 +1,172 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/appwrite_service.dart';
-import 'package:my_app/model/post.dart';
 import 'package:provider/provider.dart';
+import 'package:appwrite/appwrite.dart';
 
-import 'widgets/post_item.dart';
-import 'model/profile.dart';
+import 'features/feed/models/feed_item.dart';
+import 'features/feed/models/post_item.dart';
+import 'features/feed/models/ad_item.dart';
+import 'features/feed/models/carousel_item.dart';
+import 'features/feed/controllers/feed_controller.dart';
+import 'features/feed/widgets/post_card.dart';
+import 'features/feed/widgets/ad_card.dart';
+import 'features/feed/widgets/carousel_widget.dart';
 
-class HMVVideosTabscreen extends StatefulWidget {
-  const HMVVideosTabscreen({super.key});
+class HmvVideosTabScreen extends StatefulWidget {
+  const HmvVideosTabScreen({super.key});
 
   @override
-  State<HMVVideosTabscreen> createState() => _HMVVideosTabscreenState();
+  State<HmvVideosTabScreen> createState() => _HmvVideosTabScreenState();
 }
 
-class _HMVVideosTabscreenState extends State<HMVVideosTabscreen> {
-  late AppwriteService appwriteService;
-  List<Post>? _posts;
-  bool _isLoading = true;
-  String? _profileId;
+class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
+  late FeedController _controller;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    appwriteService = context.read<AppwriteService>();
-    _fetchPosts();
+
+    _controller = FeedController(
+      client: context.read<Client>(),
+      userId: context.read<String>(),
+      postType: 'video',
+    );
+
+    _scrollController.addListener(_onScroll);
   }
 
-  Future<void> _fetchPosts() async {
-    try {
-      final user = await appwriteService.getUser();
-      if(user != null){
-        final profiles = await appwriteService.getUserProfiles(ownerId: user.$id);
-        if(profiles.rows.isNotEmpty){
-           _profileId = profiles.rows.first.$id;
-        }
-      }
-      final postsResponse = await appwriteService.getPosts();
-      final profilesResponse = await appwriteService.getProfiles();
-
-      final profilesMap = {for (var p in profilesResponse.rows) p.$id: Profile.fromMap(p.data, p.$id)};
-
-      final posts = postsResponse.rows.map((row) {
-        final profileId = row.data['profile_id'] as String?;
-        final author = profilesMap[profileId];
-
-        if (author == null) {
-          return null;
-        }
-
-        PostType type;
-        try {
-          type = PostType.values.firstWhere((e) => e.toString() == 'PostType.${row.data['type']}');
-        } catch (e) {
-          type = PostType.text; 
-        }
-
-        if (type != PostType.video) {
-          return null;
-        }
-
-        List<String> mediaUrls = [];
-        final fileIds = row.data['file_ids'] as List?;
-        if (fileIds != null && fileIds.isNotEmpty) {
-          mediaUrls = fileIds.map((id) => appwriteService.getFileViewUrl(id)).toList();
-        }
-
-        return Post(
-          id: row.$id,
-          author: author,
-          timestamp: DateTime.tryParse(row.data['timestamp'] ?? '') ?? DateTime.now(),
-          linkTitle: row.data['titles'] as String? ?? '',
-          contentText: row.data['caption'] as String? ?? '',
-          type: type,
-          mediaUrls: mediaUrls,
-          linkUrl: row.data['linkUrl'] as String?,
-          stats: PostStats(
-            likes: row.data['likes'] ?? 0,
-            comments: row.data['comments'] ?? 0,
-            shares: row.data['shares'] ?? 0,
-            views: row.data['views'] ?? 0,
-          ),
-        );
-      }).whereType<Post>().toList();
-
-      if (mounted) {
-        setState(() {
-          _posts = posts;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent * 0.8) {
+      _controller.loadFeed();
     }
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
+    return ChangeNotifierProvider.value(
+      value: _controller,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Videos'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () {},
+            ),
+          ],
+        ),
+        body: Consumer<FeedController>(
+          builder: (context, controller, child) {
+            if (controller.error != null && controller.feedItems.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Failed to load videos',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      controller.error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () => controller.refresh(),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
 
-    if (_posts == null || _posts!.isEmpty) {
-      return const Center(
-        child: Text("No videos available."),
-      );
-    }
+            if (!controller.isLoading && controller.feedItems.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.video_library_outlined,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No videos yet',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Follow users to see their videos',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              );
+            }
 
-    return ListView.builder(
-      itemCount: _posts!.length,
-      itemBuilder: (context, index) {
-        final post = _posts![index];
-        return PostItem(post: post, profileId: _profileId ?? '');
-      },
+            return RefreshIndicator(
+              onRefresh: () => controller.refresh(),
+              child: ListView.builder(
+                controller: _scrollController,
+                itemCount:
+                    controller.feedItems.length + (controller.isLoading ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index >= controller.feedItems.length) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  final item = controller.feedItems[index];
+                  return _buildFeedItem(item, controller);
+                },
+              ),
+            );
+          },
+        ),
+      ),
     );
+  }
+
+  Widget _buildFeedItem(FeedItem item, FeedController controller) {
+    switch (item.type) {
+      case 'post':
+        return PostCard(
+          post: item as PostItem,
+          controller: controller,
+          onTap: () {
+            // Navigator.push(context, MaterialPageRoute(builder: (_) => PostDetailScreen(post: item)));
+          },
+        );
+      case 'ad':
+        return AdCard(ad: item as AdItem, controller: controller);
+      case 'carousel':
+        return CarouselWidget(
+          carousel: item as CarouselItem,
+          onItemTap: (itemId) {
+            // Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(userId: itemId)));
+          },
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }
