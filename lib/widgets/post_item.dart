@@ -1,3 +1,4 @@
+// ignore: unused_import
 import 'package:appwrite/models.dart' as models;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -47,12 +48,13 @@ class _PostItemState extends State<PostItem> {
     if (widget.post.type == PostType.video &&
         widget.post.mediaUrls != null &&
         widget.post.mediaUrls!.isNotEmpty) {
-      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.post.mediaUrls!.first))
-        ..initialize().then((_) {
-          if (mounted) {
-            setState(() {});
-          }
-        });
+      _controller =
+          VideoPlayerController.networkUrl(Uri.parse(widget.post.mediaUrls!.first))
+            ..initialize().then((_) {
+              if (mounted) {
+                setState(() {});
+              }
+            });
     }
   }
 
@@ -183,76 +185,67 @@ class _PostItemState extends State<PostItem> {
     }
   }
 
+  Future<List<Profile>> _fetchPostAuthors() async {
+    final allProfileIds = <String>{};
+    if (widget.post.profileIds != null) {
+      allProfileIds.addAll(widget.post.profileIds!);
+    }
+    if (widget.post.authorIds != null) {
+      allProfileIds.addAll(widget.post.authorIds!);
+    }
+
+    if (allProfileIds.isEmpty) {
+      return [];
+    }
+
+    final profileFutures =
+        allProfileIds.map((id) => _appwriteService.getProfile(id));
+    final profileRows = await Future.wait(profileFutures);
+    return profileRows.map((row) => Profile.fromRow(row)).toList();
+  }
+
   void _showPostAuthors() {
     showModalBottomSheet(
       context: context,
       builder: (context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (widget.post.profileIds != null)
-              ...widget.post.profileIds!.map((profileId) {
-                return FutureBuilder<models.Row>(
-                  future: _appwriteService.getProfile(profileId),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      final profile = Profile.fromRow(snapshot.data!);
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: CachedNetworkImageProvider(
-                              profile.profileImageUrl ?? ''),
-                        ),
-                        title: Text(profile.name),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  ProfilePageScreen(profileId: profileId),
-                            ),
-                          );
-                        },
-                      );
-                    } else {
-                      return ListTile(
-                        title: Text('Loading...'),
-                      );
-                    }
+        return FutureBuilder<List<Profile>>(
+          future: _fetchPostAuthors(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return const Center(child: Text('Error loading authors'));
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(child: Text('No authors to show'));
+            }
+
+            final profiles = snapshot.data!;
+            return ListView.builder(
+              shrinkWrap: true,
+              itemCount: profiles.length,
+              itemBuilder: (context, index) {
+                final profile = profiles[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: CachedNetworkImageProvider(
+                        profile.profileImageUrl ?? ''),
+                  ),
+                  title: Text(profile.name),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ProfilePageScreen(profileId: profile.id),
+                      ),
+                    );
                   },
                 );
-              }),
-            if (widget.post.authorIds != null)
-              ...widget.post.authorIds!.map((authorId) {
-                return FutureBuilder<models.Row>(
-                  future: _appwriteService.getProfile(authorId),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      final profile = Profile.fromRow(snapshot.data!);
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: CachedNetworkImageProvider(
-                              profile.profileImageUrl ?? ''),
-                        ),
-                        title: Text(profile.name),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  ProfilePageScreen(profileId: authorId),
-                            ),
-                          );
-                        },
-                      );
-                    } else {
-                      return ListTile(
-                        title: Text('Loading...'),
-                      );
-                    }
-                  },
-                );
-              }),
-          ],
+              },
+            );
+          },
         );
       },
     );
@@ -284,7 +277,9 @@ class _PostItemState extends State<PostItem> {
               child: Text(
                 widget.post.linkTitle!,
                 style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Colors.black87),
               ),
             ),
           Padding(
@@ -395,12 +390,13 @@ class _PostItemState extends State<PostItem> {
                 if (isValidUrl) {
                   return CircleAvatar(
                     radius: 20,
-                    backgroundImage:
-                        CachedNetworkImageProvider(widget.post.author.profileImageUrl!),
+                    backgroundImage: CachedNetworkImageProvider(
+                        widget.post.author.profileImageUrl!),
                     backgroundColor: Colors.grey[200],
                   );
                 } else {
-                  return CircleAvatar(radius: 20, backgroundColor: Colors.grey[200]);
+                  return CircleAvatar(
+                      radius: 20, backgroundColor: Colors.grey[200]);
                 }
               }),
             const SizedBox(width: 12),
@@ -424,7 +420,8 @@ class _PostItemState extends State<PostItem> {
                               const SizedBox(width: 4),
                               Text(
                                 'by',
-                                style: TextStyle(color: handleColor, fontSize: 14),
+                                style:
+                                    TextStyle(color: handleColor, fontSize: 14),
                               ),
                               const SizedBox(width: 4),
                               Flexible(
@@ -483,7 +480,8 @@ class _PostItemState extends State<PostItem> {
                   width: double.infinity,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => AspectRatio(
-                      aspectRatio: 1, child: Container(color: Colors.grey[200])),
+                      aspectRatio: 1,
+                      child: Container(color: Colors.grey[200])),
                   errorWidget: (context, url, error) => AspectRatio(
                       aspectRatio: 1,
                       child: Container(
@@ -525,7 +523,8 @@ class _PostItemState extends State<PostItem> {
                 width: double.infinity,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => AspectRatio(
-                    aspectRatio: 1, child: Container(color: Colors.grey[200])),
+                    aspectRatio: 1,
+                    child: Container(color: Colors.grey[200])),
                 errorWidget: (context, url, error) => AspectRatio(
                     aspectRatio: 1,
                     child: Container(
@@ -563,7 +562,8 @@ class _PostItemState extends State<PostItem> {
             showMultimedia: true,
             bodyMaxLines: 3,
             bodyTextOverflow: TextOverflow.ellipsis,
-            titleStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            titleStyle:
+                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             bodyStyle: TextStyle(fontSize: 14, color: Colors.grey[600]),
             errorWidget: Container(
                 height: 100,
@@ -627,7 +627,9 @@ class _PostItemState extends State<PostItem> {
         Text(
           label,
           style: TextStyle(
-              color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w500),
+              color: Colors.grey[600],
+              fontSize: 14,
+              fontWeight: FontWeight.w500),
         ),
       ],
     );
