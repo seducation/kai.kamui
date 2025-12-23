@@ -73,11 +73,6 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
 
       final posts = postsResponse.rows.map((row) {
         debugPrint('HMVFeaturesTabscreen: Processing post ${row.$id}');
-        final isHidden = row.data['isHidden'] as bool? ?? false;
-        if (isHidden) {
-          debugPrint('HMVFeaturesTabscreen: Post ${row.$id} is hidden.');
-          return null;
-        }
 
         final profileIds = row.data['profile_id'] as List?;
         if (profileIds == null || profileIds.isEmpty) {
