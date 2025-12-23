@@ -178,6 +178,47 @@ class _PostItemState extends State<PostItem> {
     }
   }
 
+  void _showPostAuthors() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.post.profileIds != null)
+              ...widget.post.profileIds!.map((profileId) {
+                return ListTile(
+                  title: Text('Profile ID: $profileId'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfilePageScreen(profileId: profileId),
+                      ),
+                    );
+                  },
+                );
+              }),
+            if (widget.post.authorIds != null)
+              ...widget.post.authorIds!.map((authorId) {
+                return ListTile(
+                  title: Text('Author ID: $authorId'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfilePageScreen(profileId: authorId),
+                      ),
+                    );
+                  },
+                );
+              }),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_prefs == null) {
@@ -278,8 +319,9 @@ class _PostItemState extends State<PostItem> {
 
     return GestureDetector(
       onTap: () {
-        // Only navigate to profile page if it's a single author post.
-        if (!showHamburger) {
+        if (showHamburger) {
+          _showPostAuthors();
+        } else {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -287,7 +329,6 @@ class _PostItemState extends State<PostItem> {
                     ProfilePageScreen(profileId: widget.post.author.id)),
           );
         }
-        // Tapping the hamburger icon can have a dedicated action in the future.
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
