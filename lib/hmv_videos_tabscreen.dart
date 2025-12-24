@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/appwrite_service.dart';
 import 'package:provider/provider.dart';
-import 'package:appwrite/appwrite.dart';
+import 'dart:math';
+import 'package:my_app/model/post.dart';
+import 'model/profile.dart';
+import 'widgets/post_item.dart';
 
-import 'features/feed/models/feed_item.dart';
-import 'features/feed/models/post_item.dart';
-import 'features/feed/models/ad_item.dart';
-import 'features/feed/models/carousel_item.dart';
-import 'features/feed/controllers/feed_controller.dart';
-import 'features/feed/widgets/post_card.dart';
-import 'features/feed/widgets/ad_card.dart';
-import 'features/feed/widgets/carousel_widget.dart';
+double calculateScore(Post post) {
+  final hoursSincePosted = DateTime.now().difference(post.timestamp).inHours;
+  final score =
+      ((post.stats.likes * 1) +
+          (post.stats.comments * 5) +
+          (post.stats.shares * 10)) /
+      pow(hoursSincePosted + 2, 1.5);
+  return score;
+}
 
 class HmvVideosTabScreen extends StatefulWidget {
   const HmvVideosTabScreen({super.key});
@@ -19,171 +24,246 @@ class HmvVideosTabScreen extends StatefulWidget {
 }
 
 class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
-  late FeedController _controller;
-  final ScrollController _scrollController = ScrollController();
-  bool _isControllerInitialized = false;
+  late AppwriteService _appwriteService;
+  List<Post> _posts = [];
+  bool _isLoading = true;
+  String? _profileId;
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
+    _appwriteService = context.read<AppwriteService>();
+    _fetchData();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isControllerInitialized) {
-      _controller = FeedController(
-        client: context.read<Client>(),
-        userId: context.read<String>(),
-        postType: 'video',
+  Future<void> _fetchData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final user = await _appwriteService.getUser();
+      if (user != null) {
+        final profiles = await _appwriteService.getUserProfiles(
+          ownerId: user.$id,
+        );
+        if (profiles.rows.isNotEmpty) {
+          _profileId = profiles.rows.first.$id;
+        }
+      }
+
+      final results = await Future.wait([
+        _appwriteService.getPosts(queries: ['equal("type", "video")']),
+        _appwriteService.getProfiles(),
+      ]);
+
+      final postsResponse = results[0];
+      final profilesResponse = results[1];
+
+      debugPrint(
+        'HmvVideosTabScreen: Fetched ${postsResponse.rows.length} posts raw.',
       );
-      _controller.loadFeed(); // Initial data fetch
-      _isControllerInitialized = true;
+      debugPrint(
+        'HmvVideosTabScreen: Fetched ${profilesResponse.rows.length} profiles.',
+      );
+
+      final profilesMap = {
+        for (var doc in profilesResponse.rows) doc.$id: doc.data,
+      };
+
+      final posts = postsResponse.rows
+          .map((row) {
+            debugPrint('HmvVideosTabScreen: Processing post ${row.$id}');
+
+            final profileIds = row.data['profile_id'] as List?;
+            if (profileIds == null || profileIds.isEmpty) {
+              debugPrint(
+                'HmvVideosTabScreen: Post ${row.$id} filtered. profile_id list is null or empty.',
+              );
+              return null;
+            }
+            final profileId = profileIds.first as String?;
+            if (profileId == null) {
+              debugPrint(
+                'HmvVideosTabScreen: Post ${row.$id} filtered. First profile_id in list is null.',
+              );
+              return null;
+            }
+
+            final creatorProfileData = profilesMap[profileId];
+            if (creatorProfileData == null) {
+              debugPrint(
+                'HmvVideosTabScreen: Post ${row.$id} filtered. Author profile for ID $profileId not found in profilesMap. profilesMap keys: ${profilesMap.keys.toList()}',
+              );
+              return null;
+            }
+
+            debugPrint(
+              'HmvVideosTabScreen: Post ${row.$id} passed all checks. Creating Post object.',
+            );
+
+            final author = Profile.fromMap(creatorProfileData, profileId);
+
+            final updatedAuthor = Profile(
+              id: author.id,
+              name: author.name,
+              type: author.type,
+              bio: author.bio,
+              profileImageUrl:
+                  author.profileImageUrl != null &&
+                      author.profileImageUrl!.isNotEmpty
+                  ? _appwriteService.getFileViewUrl(author.profileImageUrl!)
+                  : 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
+              ownerId: author.ownerId,
+              createdAt: author.createdAt,
+            );
+
+            final originalAuthorIds = row.data['author_id'] as List?;
+            final originalAuthorId = (originalAuthorIds?.isNotEmpty ?? false)
+                ? originalAuthorIds!.first as String?
+                : null;
+
+            Profile? originalAuthor;
+            if (originalAuthorId != null && originalAuthorId != profileId) {
+              final originalAuthorProfileData = profilesMap[originalAuthorId];
+              if (originalAuthorProfileData != null) {
+                originalAuthor = Profile.fromMap(
+                  originalAuthorProfileData,
+                  originalAuthorId,
+                );
+              }
+            }
+
+            final fileIdsData = row.data['file_ids'];
+            final List<String> fileIds = fileIdsData is List
+                ? List<String>.from(fileIdsData.map((id) => id.toString()))
+                : [];
+
+            String? postTypeString = row.data['type'];
+            if (postTypeString == null && fileIds.isNotEmpty) {
+              postTypeString = 'image'; // Infer type for old data
+            }
+
+            final postType = _getPostType(postTypeString, row.data['linkUrl']);
+
+            List<String> mediaUrls = [];
+            if (fileIds.isNotEmpty) {
+              mediaUrls = fileIds
+                  .map((id) => _appwriteService.getFileViewUrl(id))
+                  .toList();
+            }
+
+            final postStats = PostStats(
+              likes: row.data['likes'] ?? 0,
+              comments: row.data['comments'] ?? 0,
+              shares: row.data['shares'] ?? 0,
+              views: row.data['views'] ?? 0,
+            );
+
+            return Post(
+              id: row.$id,
+              author: updatedAuthor,
+              originalAuthor: originalAuthor,
+              timestamp:
+                  DateTime.tryParse(row.data['timestamp'] ?? '') ??
+                  DateTime.now(),
+              contentText: row.data['caption'] ?? '',
+              mediaUrls: mediaUrls,
+              type: postType,
+              stats: postStats,
+              linkUrl: row.data['linkUrl'],
+              linkTitle: row.data['titles'],
+              authorIds: (row.data['author_id'] as List<dynamic>?)
+                  ?.map((e) => e as String)
+                  .toList(),
+              profileIds: (row.data['profile_id'] as List<dynamic>?)
+                  ?.map((e) => e as String)
+                  .toList(),
+            );
+          })
+          .whereType<Post>()
+          .where((post) => post.type == PostType.video)
+          .toList();
+
+      debugPrint(
+        'HmvVideosTabScreen: Finished mapping. Found ${posts.length} valid posts.',
+      );
+
+      if (!mounted) return;
+
+      debugPrint(
+        'HmvVideosTabScreen: Setting state with ${posts.length} valid posts.',
+      );
+
+      setState(() {
+        _posts = posts;
+        _isLoading = false;
+      });
+      _rankPosts();
+    } catch (e, stackTrace) {
+      debugPrint('Error fetching data in HmvVideosTabScreen: $e');
+      debugPrint('Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent * 0.8) {
-      _controller.loadFeed();
+  PostType _getPostType(String? type, String? linkUrl) {
+    if (linkUrl != null && linkUrl.isNotEmpty) {
+      return PostType.linkPreview;
+    }
+    switch (type) {
+      case 'image':
+        return PostType.image;
+      case 'video':
+        return PostType.video;
+      default:
+        return PostType.text;
     }
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    if (_isControllerInitialized) {
-      _controller.dispose();
+  void _rankPosts() {
+    if (!mounted) return;
+    final rankedPosts = List<Post>.from(_posts);
+    for (var post in rankedPosts) {
+      post.score = calculateScore(post);
     }
-    super.dispose();
+    rankedPosts.sort((a, b) => b.score.compareTo(a.score));
+    setState(() {
+      _posts = rankedPosts;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_isControllerInitialized) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    return ChangeNotifierProvider.value(
-      value: _controller,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Videos'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {},
-            ),
-          ],
-        ),
-        body: Consumer<FeedController>(
-          builder: (context, controller, child) {
-            if (controller.error != null && controller.feedItems.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Failed to load videos',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      controller.error!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () => controller.refresh(),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            if (controller.isLoading && controller.feedItems.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (!controller.isLoading && controller.feedItems.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.video_library_outlined,
-                      size: 64,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No videos yet',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Follow users to see their videos',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return RefreshIndicator(
-              onRefresh: () => controller.refresh(),
-              child: ListView.builder(
-                controller: _scrollController,
-                itemCount:
-                    controller.feedItems.length + (controller.isLoading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index >= controller.feedItems.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-
-                  final item = controller.feedItems[index];
-                  return _buildFeedItem(item, controller);
-                },
-              ),
-            );
-          },
-        ),
-      ),
+    return Scaffold(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _buildFeed(),
     );
   }
 
-  Widget _buildFeedItem(FeedItem item, FeedController controller) {
-    switch (item.type) {
-      case 'post':
-        return PostCard(
-          post: item as PostItem,
-          controller: controller,
-          onTap: () {
-            // Navigator.push(context, MaterialPageRoute(builder: (_) => PostDetailScreen(post: item)));
-          },
-        );
-      case 'ad':
-        return AdCard(ad: item as AdItem, controller: controller);
-      case 'carousel':
-        return CarouselWidget(
-          carousel: item as CarouselItem,
-          onItemTap: (itemId) {
-            // Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(userId: itemId)));
-          },
-        );
-      default:
-        return const SizedBox.shrink();
-    }
+  Widget _buildFeed() {
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      child: _posts.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.4),
+                const Center(child: Text("No videos available.")),
+              ],
+            )
+          : ListView.builder(
+              itemCount: _posts.length,
+              itemBuilder: (context, index) {
+                final post = _posts[index];
+                return PostItem(post: post, profileId: _profileId ?? '');
+              },
+            ),
+    );
   }
 }

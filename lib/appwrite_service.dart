@@ -398,10 +398,11 @@ class AppwriteService {
     );
   }
 
-  Future<models.RowList> getPosts() async {
+  Future<models.RowList> getPosts({List<String>? queries}) async {
     return _db.listRows(
       databaseId: Environment.appwriteDatabaseId,
       tableId: postsCollection,
+      queries: queries,
     );
   }
 
