@@ -146,6 +146,8 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
 
             final postType = _getPostType(postTypeString, row.data['linkUrl']);
 
+            debugPrint('HmvVideosTabScreen: Post ${row.$id} has postType: $postType');
+
             List<String> mediaUrls = [];
             if (fileIds.isNotEmpty) {
               mediaUrls = fileIds
