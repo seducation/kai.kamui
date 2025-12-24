@@ -74,7 +74,6 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
       final posts = postsResponse.rows
           .map((row) {
             debugPrint('HmvVideosTabScreen: Processing post ${row.$id}');
-            debugPrint('HmvVideosTabScreen: Post ${row.$id} raw type is: ${row.data['type']}');
 
             final profileIds = row.data['profile_id'] as List?;
             if (profileIds == null || profileIds.isEmpty) {
@@ -140,21 +139,17 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
                 ? List<String>.from(fileIdsData.map((id) => id.toString()))
                 : [];
 
-            String? postTypeString = row.data['type'];
-            if (postTypeString == null && fileIds.isNotEmpty) {
-              postTypeString = 'image'; // Infer type for old data
-            }
-
-            final postType = _getPostType(postTypeString, row.data['linkUrl']);
-
-            debugPrint('HmvVideosTabScreen: Post ${row.$id} has postType: $postType');
-
             List<String> mediaUrls = [];
             if (fileIds.isNotEmpty) {
               mediaUrls = fileIds
                   .map((id) => _appwriteService.getFileViewUrl(id))
                   .toList();
             }
+
+            String? postTypeString = row.data['type'];
+            final postType = _getPostType(postTypeString, row.data['linkUrl'], mediaUrls);
+
+            debugPrint('HmvVideosTabScreen: Post ${row.$id} has postType: $postType');
 
             final postStats = PostStats(
               likes: row.data['likes'] ?? 0,
@@ -214,19 +209,22 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
     }
   }
 
-  PostType _getPostType(String? type, String? linkUrl) {
+  PostType _getPostType(String? type, String? linkUrl, List<String> mediaUrls) {
     if (type == 'video') {
       return PostType.video;
+    }
+    for (final url in mediaUrls) {
+      if (url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.avi')) {
+        return PostType.video;
+      }
     }
     if (linkUrl != null && linkUrl.isNotEmpty) {
       return PostType.linkPreview;
     }
-    switch (type) {
-      case 'image':
-        return PostType.image;
-      default:
-        return PostType.text;
+    if (mediaUrls.isNotEmpty) {
+      return PostType.image;
     }
+    return PostType.text;
   }
 
   void _rankPosts() {
