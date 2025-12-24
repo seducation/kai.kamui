@@ -28,16 +28,12 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
   List<Post> _posts = [];
   bool _isLoading = true;
   String? _profileId;
-  bool _isInitialized = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isInitialized) {
-      _appwriteService = context.read<AppwriteService>();
-      _fetchData();
-      _isInitialized = true;
-    }
+  void initState() {
+    super.initState();
+    _appwriteService = context.read<AppwriteService>();
+    _fetchData();
   }
 
   Future<void> _fetchData() async {
@@ -75,7 +71,7 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
         for (var doc in profilesResponse.rows) doc.$id: doc.data
       };
 
-      final posts = postsResponse.rows.map((row) {
+      final postFutures = postsResponse.rows.map((row) async {
         debugPrint('HMVFeaturesTabscreen: Processing post ${row.$id}');
 
         final profileIds = row.data['profile_id'] as List?;
@@ -131,19 +127,15 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
             ? List<String>.from(fileIdsData.map((id) => id.toString()))
             : [];
 
-        String? postTypeString = row.data['type'];
-        if (postTypeString == null && fileIds.isNotEmpty) {
-          postTypeString = 'image'; // Infer type for old data
-        }
-
-        final postType = _getPostType(postTypeString, row.data['linkUrl']);
-
         List<String> mediaUrls = [];
         if (fileIds.isNotEmpty) {
           mediaUrls = fileIds
               .map((id) => _appwriteService.getFileViewUrl(id))
               .toList();
         }
+
+        String? postTypeString = row.data['type'];
+        final postType = await _getPostType(postTypeString, row.data['linkUrl'], fileIds);
 
         final postStats = PostStats(
           likes: row.data['likes'] ?? 0,
@@ -171,7 +163,9 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
               ?.map((e) => e as String)
               .toList(),
         );
-      }).whereType<Post>().toList();
+      });
+
+      final posts = (await Future.wait(postFutures)).whereType<Post>().toList();
       
       debugPrint('HMVFeaturesTabscreen: Finished mapping. Found ${posts.length} valid posts.');
 
@@ -197,18 +191,26 @@ class _HMVFeaturesTabscreenState extends State<HMVFeaturesTabscreen> {
     }
   }
 
-  PostType _getPostType(String? type, String? linkUrl) {
+  Future<PostType> _getPostType(String? type, String? linkUrl, List<String> fileIds) async {
+    if (type == 'video') {
+      return PostType.video;
+    }
+    if (fileIds.isNotEmpty) {
+      try {
+        final file = await _appwriteService.getFile(fileIds.first);
+        if (file.mimeType.startsWith('video/')) {
+          return PostType.video;
+        }
+        return PostType.image;
+      } catch (e) {
+        debugPrint('Error fetching file metadata: $e');
+        return PostType.image; // Assume image if metadata fetch fails
+      }
+    }
     if (linkUrl != null && linkUrl.isNotEmpty) {
       return PostType.linkPreview;
     }
-    switch (type) {
-      case 'image':
-        return PostType.image;
-      case 'video':
-        return PostType.video;
-      default:
-        return PostType.text;
-    }
+    return PostType.text;
   }
 
   void _rankPosts() {
