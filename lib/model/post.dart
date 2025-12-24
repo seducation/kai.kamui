@@ -1,6 +1,6 @@
 import 'package:my_app/model/profile.dart';
 
-enum PostType { text, image, linkPreview, video }
+enum PostType { text, image, linkPreview, video, file, audio }
 
 class PostStats {
   int likes;

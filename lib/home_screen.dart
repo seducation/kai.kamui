@@ -8,6 +8,9 @@ import 'hmv_shorts_tabscreen.dart';
 import 'hmv_videos_tabscreen.dart';
 import 'hmv_forum_tabscreen.dart';
 import 'hmv_question_tabscreen.dart';
+import 'hmv_files_tabscreen.dart';
+import 'hmv_music_tabscreen.dart';
+import 'hmv_photos_tabscreen.dart';
 import 'chats_screen.dart';
 import 'tab_manager_screen.dart';
 
@@ -233,6 +236,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           return const HmvForumTabscreen();
         } else if (name == 'questions') {
           return const HmvQuestionTabscreen();
+        } else if (name == 'files') {
+          return const HmvFilesTabscreen();
+        } else if (name == 'music') {
+          return const HmvMusicTabscreen();
+        } else if (name == 'photos') {
+          return const HmvPhotosTabscreen();
         } else {
           return Center(child: Text(name));
         }

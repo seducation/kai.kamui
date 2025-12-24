@@ -16,14 +16,14 @@ double calculateScore(Post post) {
   return score;
 }
 
-class HMVNewsTabscreen extends StatefulWidget {
-  const HMVNewsTabscreen({super.key});
+class HmvFilesTabscreen extends StatefulWidget {
+  const HmvFilesTabscreen({super.key});
 
   @override
-  State<HMVNewsTabscreen> createState() => _HMVNewsTabscreenState();
+  State<HmvFilesTabscreen> createState() => _HmvFilesTabscreenState();
 }
 
-class _HMVNewsTabscreenState extends State<HMVNewsTabscreen> {
+class _HmvFilesTabscreenState extends State<HmvFilesTabscreen> {
   late AppwriteService _appwriteService;
   List<Post> _posts = [];
   bool _isLoading = true;
@@ -65,6 +65,27 @@ class _HMVNewsTabscreenState extends State<HMVNewsTabscreen> {
       };
 
       final postFutures = postsResponse.rows.map((row) async {
+        final mediaFileIds = row.data['media_files'] as List?;
+        if (mediaFileIds == null || mediaFileIds.isEmpty) {
+          return null;
+        }
+
+        final mediaFiles = await Future.wait(
+          mediaFileIds.map((id) => _appwriteService.getFile(id as String)),
+        );
+
+        PostType postType;
+        final fileMimeTypes = mediaFiles.map((f) => f.mimeType).toSet();
+        if (fileMimeTypes.any((type) => type.contains('pdf') || type.contains('msword') || type.contains('wordprocessingml'))) {
+            postType = PostType.file;
+        } else {
+          return null;
+        }
+
+        final mediaUrls = mediaFiles
+            .map((file) => _appwriteService.getFileViewUrl(file.$id))
+            .whereType<String>()
+            .toList();
 
         final profileIds = row.data['profile_id'] as List?;
         if (profileIds == null || profileIds.isEmpty) {
@@ -112,8 +133,6 @@ class _HMVNewsTabscreenState extends State<HMVNewsTabscreen> {
           }
         }
         
-        final postType = PostType.text;
-
         final postStats = PostStats(
           likes: row.data['likes'] ?? 0,
           comments: row.data['comments'] ?? 0,
@@ -129,7 +148,7 @@ class _HMVNewsTabscreenState extends State<HMVNewsTabscreen> {
               DateTime.tryParse(row.data['timestamp'] ?? '') ??
                   DateTime.now(),
           contentText: row.data['caption'] ?? '',
-          mediaUrls: [],
+          mediaUrls: mediaUrls,
           type: postType,
           stats: postStats,
           linkUrl: row.data['linkUrl'],
@@ -145,7 +164,6 @@ class _HMVNewsTabscreenState extends State<HMVNewsTabscreen> {
 
       final posts = (await Future.wait(postFutures))
           .whereType<Post>()
-          .where((post) => !(post.linkTitle != null && post.linkTitle!.isNotEmpty && post.contentText.isEmpty && (post.mediaUrls == null || post.mediaUrls!.isEmpty)))
           .toList();
 
       if (!mounted) return;
@@ -157,7 +175,7 @@ class _HMVNewsTabscreenState extends State<HMVNewsTabscreen> {
         _isLoading = false;
       });
     } catch (e, stackTrace) {
-      debugPrint('Error fetching data in HMVNewsTabscreen: $e');
+      debugPrint('Error fetching data in HmvFilesTabscreen: $e');
       debugPrint('Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
@@ -196,7 +214,7 @@ class _HMVNewsTabscreenState extends State<HMVNewsTabscreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height * 0.4),
-                const Center(child: Text("No news available.")),
+                const Center(child: Text("No files available.")),
               ],
             )
           : ListView.builder(
