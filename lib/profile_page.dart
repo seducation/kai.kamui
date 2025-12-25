@@ -10,12 +10,13 @@ import 'package:my_app/tabs/live_tab.dart';
 import 'package:my_app/tabs/playlists_tab.dart';
 import 'package:my_app/tabs/posts_tab.dart';
 import 'package:my_app/tabs/products_tab.dart';
-import 'package:my_app/tabs/shorts_tab.dart';
+import 'package:my_app/tabs/servicesprofile_tab.dart';
 import 'package:my_app/tabs/videos_tab.dart';
 import 'package:my_app/widgets/edit_profile_fab.dart';
 import 'package:my_app/widgets/more_options_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:my_app/tabs/jobs_tab.dart';
 
 class ProfilePageScreen extends StatefulWidget {
   final String profileId;
@@ -121,9 +122,17 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
   }
 
   List<String> _getTabsForProfile(Profile? profile) {
-    final baseTabs = ["Home", "Posts", "Videos", "Shorts", "Live", "Playlists"];
+    final baseTabs = [
+      "Home",
+      "Posts",
+      "Videos",
+      "Services",
+      "Live",
+      "Playlists",
+    ];
     if (profile?.type == 'business') {
       baseTabs.add("Products");
+      baseTabs.add("Jobs");
     }
     baseTabs.add("About");
     return baseTabs;
@@ -449,12 +458,13 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
       HomeTab(profileId: widget.profileId),
       PostsTab(profileId: widget.profileId),
       VideosTab(profileId: widget.profileId),
-      ShortsTab(profileId: widget.profileId),
+      Servicesprofiletab(profileId: widget.profileId),
       LiveTab(profileId: widget.profileId),
       PlaylistsTab(profileId: widget.profileId),
     ];
     if (profile != null && profile.type == 'business') {
       baseTabViews.add(ProductsTab(profileId: widget.profileId));
+      baseTabViews.add(JobsTab(profileId: widget.profileId));
     }
     baseTabViews.add(AboutTab(profileId: widget.profileId));
     return baseTabViews;

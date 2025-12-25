@@ -1,7 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'hmv_feature_tabscreen.dart';
+import 'hmv_features_tabscreen.dart';
 import 'hmv_following_tabscreen.dart';
 import 'hmv_news_tabscreen.dart';
 import 'hmv_shorts_tabscreen.dart';
@@ -225,7 +225,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         } else if (name == 'shorts') {
           return const HMVShortsTabscreen();
         } else if (name == 'feature') {
-          return const HmvFeatureTabScreen();
+          return const HMVFeaturesTabscreen();
         } else if (name == 'videos') {
           return const HmvVideosTabScreen();
         } else if (name == 'news') {
