@@ -17,6 +17,9 @@ import 'package:my_app/widgets/more_options_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:my_app/tabs/jobs_tab.dart';
+import 'package:my_app/add_notice_screen.dart';
+import 'package:my_app/add_service_screen.dart';
+import 'package:my_app/add_job_screen.dart';
 
 class ProfilePageScreen extends StatefulWidget {
   final String profileId;
@@ -189,12 +192,6 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
   Widget build(BuildContext context) {
     final isCurrentUser =
         _currentUserId != null && _currentUserId == _profile?.ownerId;
-    final accountTypes = ['profile', 'channel', 'thread', 'business'];
-    final showEditButton =
-        isCurrentUser &&
-        _profile != null &&
-        accountTypes.contains(_profile!.type);
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: _isLoading || _tabController == null
@@ -415,32 +412,114 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                   },
               body: TabBarView(controller: _tabController, children: _tabViews),
             ),
-      floatingActionButton: showEditButton
-          ? Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (_profile?.type == 'business')
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: FloatingActionButton(
-                      heroTag: 'addProduct',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                AddProductScreen(profileId: widget.profileId),
-                          ),
-                        );
-                      },
-                      backgroundColor: Colors.black,
-                      child: const Icon(Icons.shopping_bag),
-                    ),
-                  ),
-                EditProfileFAB(profileId: widget.profileId),
-              ],
+      floatingActionButton: isCurrentUser
+          ? FloatingActionButton(
+              onPressed: () {
+                _showAddMenu(context);
+              },
+              backgroundColor: Colors.black,
+              child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
+    );
+  }
+
+  void _showAddMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        final isBusiness = _profile?.type == 'business';
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Profile Categories',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Edit Profile'),
+                onTap: () {
+                  Navigator.pop(context);
+                  showDialog(
+                    context: context,
+                    builder: (context) =>
+                        ChannelSettingsDialog(profileId: widget.profileId),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.add_alert),
+                title: const Text('Add Notice'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AddNoticeScreen(profileId: widget.profileId),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.build),
+                title: const Text('Add Service'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          AddServiceScreen(profileId: widget.profileId),
+                    ),
+                  );
+                },
+              ),
+              if (isBusiness) ...[
+                const Divider(),
+                const Text(
+                  'Business Categories',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.work),
+                  title: const Text('Add Jobs'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            AddJobScreen(profileId: widget.profileId),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.shopping_bag),
+                  title: const Text('Add Products'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            AddProductScreen(profileId: widget.profileId),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
