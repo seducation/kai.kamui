@@ -27,6 +27,7 @@ class AppwriteService {
   static const String productsCollection = "products";
   static const String playlistsCollection = "playlists";
   static const String storiesCollection = "stories";
+  static const String notificationsCollection = "notifications";
 
   AppwriteService(this._client) {
     _db = TablesDB(_client);
@@ -912,6 +913,19 @@ class AppwriteService {
     return await _account.updateMFAChallenge(
       challengeId: challengeId,
       otp: secret,
+    );
+  }
+
+  Future<models.RowList> getNotifications() async {
+    final user = await getUser();
+    if (user == null) {
+      throw AppwriteException('User not authenticated', 401);
+    }
+
+    return await _db.listRows(
+      databaseId: Environment.appwriteDatabaseId,
+      tableId: notificationsCollection,
+      queries: [Query.equal('userId', user.$id), Query.orderDesc('timestamp')],
     );
   }
 
