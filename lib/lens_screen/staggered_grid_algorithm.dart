@@ -5,10 +5,12 @@ class StaggeredGridAlgorithm {
     QuiltedGridTile(2, 2),
     QuiltedGridTile(1, 1),
     QuiltedGridTile(1, 1),
+    QuiltedGridTile(1, 1),
+    QuiltedGridTile(1, 1),
   ];
   static List<QuiltedGridTile> getPattern() => pattern;
 
   static bool isBigTile(int index) {
-    return (index % 3) == 0;
+    return (index % 5) == 0;
   }
 }

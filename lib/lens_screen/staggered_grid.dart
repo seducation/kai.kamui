@@ -40,56 +40,60 @@ class LensStaggeredGrid extends StatelessWidget {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.all(4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
       sliver: SliverGrid(
         gridDelegate: SliverQuiltedGridDelegate(
-          crossAxisCount: 2,
-          mainAxisSpacing: 4,
-          crossAxisSpacing: 4,
+          crossAxisCount: 3,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
           pattern: StaggeredGridAlgorithm.getPattern(),
         ),
         delegate: SliverChildBuilderDelegate((context, index) {
           final item = items[index];
-          final isBigTile = (index % 3) == 0;
+          final isBigTile = StaggeredGridAlgorithm.isBigTile(index);
           return GestureDetector(
             onTap: () {
               if (item.data['link'] != null) {
-                // Using 'link' field
                 _launchUrl(context, item.data['link']);
               }
             },
-            child: Card(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(16),
+              ),
               clipBehavior: Clip.antiAlias,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (item.data['imageUrl'] != null)
-                    Expanded(
-                      child: CachedNetworkImage(
-                        imageUrl: item.data['imageUrl'],
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) =>
-                            const Center(child: CircularProgressIndicator()),
-                        errorWidget: (context, url, error) =>
-                            const Icon(Icons.error),
-                      ),
-                    ),
-                  if (item.data['title'] != null)
+                  Expanded(
+                    child: item.data['imageUrl'] != null
+                        ? CachedNetworkImage(
+                            imageUrl: item.data['imageUrl'],
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey[200],
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.error),
+                          )
+                        : Container(color: Colors.grey[300]),
+                  ),
+                  if (!isBigTile && item.data['title'] != null)
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Text(
                         item.data['title'],
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  if (item.data['description'] != null && !isBigTile)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text(
-                        item.data['description'],
-                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
