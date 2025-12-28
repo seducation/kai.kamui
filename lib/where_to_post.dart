@@ -37,8 +37,12 @@ class _WhereToPostScreenState extends State<WhereToPostScreen> {
     });
     try {
       final appwriteService = context.read<AppwriteService>();
+      final authService = context.read<AuthService>();
+      final activeId = authService.activeIdentityId;
+
       final response = await appwriteService.getFollowingProfiles(
-        userId: userId,
+        followerId: activeId,
+        userId: activeId == null ? userId : null,
       );
       if (mounted) {
         setState(() {

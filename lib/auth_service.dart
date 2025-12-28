@@ -18,8 +18,14 @@ class AuthService with ChangeNotifier {
   bool _isLoggedIn = false;
   User? _currentUser;
 
+  // Active Persona State
+  String? _activeIdentityId;
+  String? _activeIdentityType; // 'private' or 'public'
+
   bool get isLoggedIn => _isLoggedIn;
   User? get currentUser => _currentUser;
+  String? get activeIdentityId => _activeIdentityId;
+  String? get activeIdentityType => _activeIdentityType;
 
   AuthService(this.client) {
     account = Account(client);
@@ -31,10 +37,21 @@ class AuthService with ChangeNotifier {
       final user = await account.get();
       _isLoggedIn = true;
       _currentUser = User(id: user.$id, name: user.name, email: user.email);
+      // Determine default active identity (requires fetching profiles, which we might need AppwriteService for)
+      // For now, let's leave it null or set it later when profiles are loaded.
+      // Ideally, the UI or a higher-level provider sets this after login.
     } on AppwriteException {
       _isLoggedIn = false;
       _currentUser = null;
+      _activeIdentityId = null;
+      _activeIdentityType = null;
     }
+    notifyListeners();
+  }
+
+  void setActiveIdentity(String id, String type) {
+    _activeIdentityId = id;
+    _activeIdentityType = type;
     notifyListeners();
   }
 
@@ -55,6 +72,8 @@ class AuthService with ChangeNotifier {
     await account.deleteSession(sessionId: 'current');
     _isLoggedIn = false;
     _currentUser = null;
+    _activeIdentityId = null;
+    _activeIdentityType = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     notifyListeners();

@@ -5,6 +5,7 @@ import 'package:my_app/find_account_page_screen.dart';
 import 'package:my_app/model/chat_model.dart';
 import 'package:my_app/model/profile.dart';
 import 'package:my_app/sign_in.dart';
+import 'package:my_app/auth_service.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 
@@ -44,16 +45,25 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     try {
       final currentUser = await _appwriteService.getUser();
       if (!mounted) return;
+      final authService = context.read<AuthService>(); // Get auth service
+
+      if (!mounted) return;
 
       if (currentUser != null) {
-        final profiles = await _appwriteService.getFollowingProfiles(userId: currentUser.$id);
+        // Use active identity if available, otherwise fallback to main profile via generic fetch
+        final activeId = authService.activeIdentityId;
+        final profiles = await _appwriteService.getFollowingProfiles(
+          followerId: activeId,
+          userId: activeId == null ? currentUser.$id : null,
+        );
         if (!mounted) return;
 
         contactList = profiles.rows
             .where((doc) => doc.data['type'] == 'profile')
             .map((doc) {
-          return Profile.fromMap(doc.data, doc.$id);
-        }).toList();
+              return Profile.fromMap(doc.data, doc.$id);
+            })
+            .toList();
       }
     } catch (e) {
       error = "Error loading contacts: $e";
@@ -62,9 +72,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     if (!mounted) return;
 
     if (error != null) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text(error)));
     }
     setState(() {
       if (error == null) {
@@ -77,14 +85,13 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
   Future<void> _handleContactTap(Profile contact) async {
     final navigator = Navigator.of(context);
     try {
-      final user = await _appwriteService.getUser(); // Ensure user is still logged in
+      final user = await _appwriteService
+          .getUser(); // Ensure user is still logged in
       if (!mounted) return;
 
       if (user == null) {
         await navigator.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const SignInScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const SignInScreen()),
         );
         return;
       }
@@ -113,9 +120,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
     } catch (e) {
       if (!mounted) return;
       await navigator.pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const SignInScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const SignInScreen()),
       );
     }
   }
@@ -139,7 +144,9 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
                 "${_contacts.length} contacts",
                 style: TextStyle(
                   fontSize: 13,
-                  color: theme.appBarTheme.titleTextStyle?.color?.withAlpha(179),
+                  color: theme.appBarTheme.titleTextStyle?.color?.withAlpha(
+                    179,
+                  ),
                   fontWeight: FontWeight.normal,
                 ),
               ),
@@ -157,10 +164,7 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
       ),
       body: _isLoading
@@ -168,16 +172,17 @@ class _SelectContactScreenState extends State<SelectContactScreen> {
           : ListView(
               children: [
                 const SizedBox(height: 10),
-                ..._contacts.map((contact) => ContactItem(
-                      contact: contact,
-                      onTap: () => _handleContactTap(contact),
-                    )),
+                ..._contacts.map(
+                  (contact) => ContactItem(
+                    contact: contact,
+                    onTap: () => _handleContactTap(contact),
+                  ),
+                ),
               ],
             ),
     );
   }
 }
-
 
 // Widget for individual contacts
 class ContactItem extends StatelessWidget {
@@ -216,10 +221,7 @@ class ContactItem extends StatelessWidget {
               )
             : null,
       ),
-      title: Text(
-        contact.name,
-        style: theme.textTheme.titleMedium,
-      ),
+      title: Text(contact.name, style: theme.textTheme.titleMedium),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 2.0),
         child: Text(
@@ -229,10 +231,7 @@ class ContactItem extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
       ),
-      trailing: IconButton(
-        icon: const Icon(Icons.chat),
-        onPressed: onTap,
-      ),
+      trailing: IconButton(icon: const Icon(Icons.chat), onPressed: onTap),
     );
   }
 }

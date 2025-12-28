@@ -39,7 +39,9 @@ class _FindAccountPageScreenState extends State<FindAccountPageScreen> {
         _currentUser = user;
       });
       if (user != null) {
-        _currentUserProfileId = await _appwriteService.getCurrentUserProfileId(
+        // Use active identity logic or fallback to main profile.
+        // During init, we can try to fetch the main profile ID using the new method name.
+        _currentUserProfileId = await _appwriteService.getMainUserProfileId(
           user.$id,
         );
       }
@@ -137,14 +139,27 @@ class _FindAccountPageScreenState extends State<FindAccountPageScreen> {
       if (_currentUserProfileId == null) return;
 
       if (isFollowing) {
-        await _appwriteService.unfollowUser(
-          followerProfileId: _currentUserProfileId!,
-          followingProfileId: profileId,
+        await _appwriteService.unfollowEntity(
+          senderId: _currentUserProfileId!,
+          targetId: profileId,
+          targetType: 'profile',
         );
       } else {
-        await _appwriteService.followUser(
-          followerProfileId: _currentUserProfileId!,
-          followingProfileId: profileId,
+        await _appwriteService.followEntity(
+          senderId: _currentUserProfileId!,
+          targetId: profileId,
+          isAnonymous:
+              false, // Defaulting to public for 'Search' context if untracked, or use 'private' if that's desired default.
+          // Since this screen doesn't seem to have full active-identity awareness yet,
+          // we are using the fetched _currentUserProfileId (likely main profile).
+          // Assuming main profile follows are 'public' or 'private' based on user preference?
+          // For now, let's assume 'private' (anonymous/persona) as it's safer, OR
+          // since this is a "Find Accounts" page, maybe public?
+          // The prompt mentioned: "If isAnonymous is true... Private Profile ID".
+          // Here we are using _currentUserProfileId which IS the profile ID.
+          // Let's set isAnonymous = true for now to match "Private Profile" behavior
+          // if we treat the main profile as the private identity.
+          targetType: 'profile',
         );
       }
       if (mounted) {

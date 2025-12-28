@@ -34,9 +34,8 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
   TabController? _tabController;
   late AppwriteService _appwriteService;
   late AuthService _authService;
-  Profile? _profile;
-  String?
-  _currentUserProfileId; // Renamed from _currentUserId to avoid confusion, though implies profile ID
+  Profile? _profile; // The profile being VIEWED
+  // _currentUserProfileId is now managed by AuthService's activeIdentityId
 
   bool _isFollowing = false;
   int _followersCount = 0;
@@ -82,14 +81,21 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
         return;
       }
 
-      // Get the current user's profile ID
-      _currentUserProfileId = await _appwriteService.getCurrentUserProfileId(
-        user.id,
-      );
+      // Ensure we have an active identity. If not, try to set the generic one.
+      if (_authService.activeIdentityId == null) {
+        final mainProfileId = await _appwriteService.getMainUserProfileId(
+          user.id,
+        );
+        if (mainProfileId != null) {
+          _authService.setActiveIdentity(
+            mainProfileId,
+            'private',
+          ); // Default to private/main
+        }
+      }
 
       final profileRow = await _appwriteService.getProfile(widget.profileId);
       if (!mounted) return;
-      final followers = List<String>.from(profileRow.data['followers'] ?? []);
 
       _profile = Profile.fromRow(profileRow);
 
@@ -105,16 +111,18 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
           ? _appwriteService.getFileViewUrl(bannerImageId)
           : null;
 
-      // Note: We are now displaying the legacy count for now, but ideally we should count
-      // from the 'follows' collection. However, 'followers' array might still be populated.
-      // If we want accurate count from collection, we'd need another query.
-      // For now, let's trust the array count if it exists, or 0.
-      _followersCount = followers.length;
+      // Use the new service to get the count
+      final count = await _appwriteService.getFollowerCount(
+        targetId: widget.profileId,
+      );
+      _followersCount = count;
 
-      if (_currentUserProfileId != null) {
+      if (_authService.activeIdentityId != null) {
         _isFollowing = await _appwriteService.isFollowing(
-          followerProfileId: _currentUserProfileId!,
-          followingProfileId: widget.profileId,
+          currentUserId:
+              user.id, // Not strictly used if activeIdentityId is passed
+          targetId: widget.profileId,
+          activeIdentityId: _authService.activeIdentityId,
         );
       } else {
         _isFollowing = false;
@@ -159,10 +167,12 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
   }
 
   Future<void> _toggleFollow() async {
-    if (_currentUserProfileId == null) {
+    final activeId = _authService.activeIdentityId;
+
+    if (activeId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('You must have a profile to follow others.'),
+          content: Text('No active profile selected. Please select a profile.'),
         ),
       );
       return;
@@ -181,15 +191,20 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
     });
 
     try {
+      final isAnonymous = _authService.activeIdentityType == 'private';
+
       if (_isFollowing) {
-        await _appwriteService.followUser(
-          followerProfileId: _currentUserProfileId!,
-          followingProfileId: widget.profileId,
+        await _appwriteService.followEntity(
+          senderId: activeId,
+          targetId: widget.profileId,
+          isAnonymous: isAnonymous,
+          targetType: 'profile',
         );
       } else {
-        await _appwriteService.unfollowUser(
-          followerProfileId: _currentUserProfileId!,
-          followingProfileId: widget.profileId,
+        await _appwriteService.unfollowEntity(
+          senderId: activeId,
+          targetId: widget.profileId,
+          targetType: 'profile',
         );
       }
     } catch (e) {
@@ -215,9 +230,8 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
   @override
   Widget build(BuildContext context) {
     final isCurrentUser =
-        _currentUserProfileId != null &&
-        _currentUserProfileId ==
-            widget.profileId; // Check if viewing own profile
+        _authService.activeIdentityId != null &&
+        _authService.activeIdentityId == widget.profileId;
     return Scaffold(
       backgroundColor: Colors.white,
       body: _isLoading || _tabController == null
