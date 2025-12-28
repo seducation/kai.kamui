@@ -441,44 +441,8 @@ class _PostItemState extends State<PostItem> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(context),
-          if (widget.post.contentText.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12.0,
-                vertical: 8.0,
-              ),
-              child: Text(
-                widget.post.contentText,
-                style: const TextStyle(fontSize: 15, height: 1.3),
-              ),
-            ),
           _buildMedia(context),
-          if (widget.post.linkTitle != null &&
-              widget.post.linkTitle!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12.0,
-                vertical: 8.0,
-              ),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PostDetailScreen(post: widget.post),
-                    ),
-                  );
-                },
-                child: Text(
-                  widget.post.linkTitle!,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-            ),
+          _buildContentText(context),
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 12.0,
@@ -487,6 +451,59 @@ class _PostItemState extends State<PostItem> {
             child: _buildActionBar(),
           ),
           const Divider(height: 1, color: Color(0xFFE0E0E0)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContentText(BuildContext context) {
+    final hasTitle =
+        widget.post.linkTitle != null && widget.post.linkTitle!.isNotEmpty;
+    final hasContent = widget.post.contentText.isNotEmpty;
+
+    if (!hasTitle && !hasContent) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Primary Text: linkTitle (if exists)
+          if (hasTitle)
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PostDetailScreen(post: widget.post),
+                  ),
+                );
+              },
+              child: Text(
+                widget.post.linkTitle!,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          // Secondary Text: contentText (if exists)
+          if (hasContent) ...[
+            if (hasTitle) const SizedBox(height: 8),
+            Text(
+              widget.post.contentText,
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.3,
+                color: Colors.black87,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ],
       ),
     );
