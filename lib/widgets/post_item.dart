@@ -37,6 +37,9 @@ class _PostItemState extends State<PostItem> {
   List<Profile> _cachedAuthors = [];
   bool _isLoadingAuthors = false;
 
+  // Sequential playlist state
+  int _currentVideoIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -50,20 +53,70 @@ class _PostItemState extends State<PostItem> {
     if (widget.post.type == PostType.video &&
         widget.post.mediaUrls != null &&
         widget.post.mediaUrls!.isNotEmpty) {
-      _controller =
-          VideoPlayerController.networkUrl(
-              Uri.parse(widget.post.mediaUrls!.first),
-            )
-            ..initialize().then((_) {
-              if (mounted) {
-                setState(() {});
-              }
-            });
+      _initializeVideoPlaylist();
+    }
+  }
+
+  Future<void> _initializeVideoPlaylist() async {
+    if (widget.post.mediaUrls == null || widget.post.mediaUrls!.isEmpty) {
+      return;
+    }
+
+    _currentVideoIndex = 0;
+    await _loadVideo(_currentVideoIndex);
+  }
+
+  Future<void> _loadVideo(int index) async {
+    if (widget.post.mediaUrls == null ||
+        index >= widget.post.mediaUrls!.length) {
+      return;
+    }
+
+    // Dispose existing controller
+    _controller?.removeListener(_videoListener);
+    _controller?.dispose();
+
+    // Create and initialize new controller
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse(widget.post.mediaUrls![index]),
+    );
+
+    await _controller!.initialize();
+    _controller!.addListener(_videoListener);
+
+    if (mounted) {
+      setState(() {
+        _currentVideoIndex = index;
+      });
+      // Auto-play if not the first video or if user had started playback
+      if (index > 0) {
+        _controller!.play();
+      }
+    }
+  }
+
+  void _videoListener() {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return;
+    }
+
+    // Check if video ended
+    if (_controller!.value.position >= _controller!.value.duration) {
+      // Auto-advance to next video
+      if (_currentVideoIndex < (widget.post.mediaUrls?.length ?? 0) - 1) {
+        _loadVideo(_currentVideoIndex + 1);
+      }
+    }
+
+    // Update UI for progress
+    if (mounted) {
+      setState(() {});
     }
   }
 
   @override
   void dispose() {
+    _controller?.removeListener(_videoListener);
     _controller?.dispose();
     super.dispose();
   }
@@ -536,7 +589,7 @@ class _PostItemState extends State<PostItem> {
                     pageBuilder: (context, animation, secondaryAnimation) =>
                         FullScreenPostDetailPage(
                           post: widget.post,
-                          initialIndex: 0,
+                          initialIndex: _currentVideoIndex,
                           profileId: widget.profileId,
                         ),
                   ),
@@ -590,7 +643,7 @@ class _PostItemState extends State<PostItem> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '${_formatDuration(_controller!.value.position)} / ${_formatDuration(_controller!.value.duration)}',
+                              _getPlaylistTimeDisplay(),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
@@ -1014,27 +1067,134 @@ class _PostItemState extends State<PostItem> {
       return const SizedBox.shrink();
     }
 
+    // Calculate cumulative position and total duration
+    final cumulativeData = _getCumulativeProgress();
+    final videoCount = widget.post.mediaUrls?.length ?? 0;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-      child: SliderTheme(
-        data: SliderThemeData(
-          trackHeight: 3.0,
-          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-          overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
-          activeTrackColor: Theme.of(context).primaryColor,
-          inactiveTrackColor: Colors.grey[300],
-          thumbColor: Theme.of(context).primaryColor,
-        ),
-        child: Slider(
-          value: _controller!.value.position.inMilliseconds.toDouble(),
-          min: 0.0,
-          max: _controller!.value.duration.inMilliseconds.toDouble(),
-          onChanged: (value) {
-            _controller!.seekTo(Duration(milliseconds: value.toInt()));
-          },
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Adjust track width to account for Slider internal padding (usually 12 (thumb radius/2) or similar)
+          // Material Slider typically has 24px total padding on sides (12 each)
+          final totalTrackWidth = constraints.maxWidth - 24;
+
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              SliderTheme(
+                data: SliderThemeData(
+                  trackHeight: 3.0,
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 6.0,
+                  ),
+                  overlayShape: const RoundSliderOverlayShape(
+                    overlayRadius: 12.0,
+                  ),
+                  activeTrackColor: Theme.of(context).primaryColor,
+                  inactiveTrackColor: Colors.grey[300],
+                  thumbColor: Theme.of(context).primaryColor,
+                ),
+                child: Slider(
+                  value: cumulativeData['position']!.toDouble(),
+                  min: 0.0,
+                  max: cumulativeData['total']!.toDouble(),
+                  onChanged: (value) {
+                    _seekToPlaylistPosition(value.toInt());
+                  },
+                ),
+              ),
+              // Boundary markers
+              if (videoCount > 1)
+                ...List.generate(videoCount - 1, (index) {
+                  final progressPercent = (index + 1) / videoCount;
+                  return Positioned(
+                    left:
+                        12 +
+                        (totalTrackWidth * progressPercent) -
+                        1, // -1 to center 2px divider
+                    child: Container(
+                      width: 2,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  Map<String, int> _getCumulativeProgress() {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return {'position': 0, 'total': 0};
+    }
+
+    // For single video, return simple position
+    if (widget.post.mediaUrls == null || widget.post.mediaUrls!.length == 1) {
+      return {
+        'position': _controller!.value.position.inMilliseconds,
+        'total': _controller!.value.duration.inMilliseconds,
+      };
+    }
+
+    // Calculate total duration (approximation for unloaded videos)
+    int total =
+        _controller!.value.duration.inMilliseconds *
+        widget.post.mediaUrls!.length;
+
+    // Calculate cumulative position
+    int position =
+        (_currentVideoIndex * _controller!.value.duration.inMilliseconds) +
+        _controller!.value.position.inMilliseconds;
+
+    return {'position': position, 'total': total};
+  }
+
+  void _seekToPlaylistPosition(int milliseconds) {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return;
+    }
+    if (widget.post.mediaUrls == null || widget.post.mediaUrls!.isEmpty) {
+      return;
+    }
+
+    final avgVideoDuration = _controller!.value.duration.inMilliseconds;
+
+    // Calculate which video and position
+    final targetVideoIndex = milliseconds ~/ avgVideoDuration;
+    final positionInVideo = milliseconds % avgVideoDuration;
+
+    if (targetVideoIndex != _currentVideoIndex &&
+        targetVideoIndex < widget.post.mediaUrls!.length) {
+      // Load different video
+      _loadVideo(targetVideoIndex).then((_) {
+        if (mounted && _controller != null) {
+          _controller!.seekTo(Duration(milliseconds: positionInVideo));
+        }
+      });
+    } else {
+      // Same video, just seek
+      _controller!.seekTo(Duration(milliseconds: positionInVideo));
+    }
+  }
+
+  String _getPlaylistTimeDisplay() {
+    final cumulativeData = _getCumulativeProgress();
+    final position = Duration(milliseconds: cumulativeData['position']!);
+    final total = Duration(milliseconds: cumulativeData['total']!);
+    return '${_formatDuration(position)} / ${_formatDuration(total)}';
   }
 
   String _formatDuration(Duration duration) {
