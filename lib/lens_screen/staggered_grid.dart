@@ -53,7 +53,7 @@ class _LensStaggeredGridState extends State<LensStaggeredGrid> {
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      padding: const EdgeInsets.all(8.0),
       sliver: SliverGrid(
         gridDelegate: SliverQuiltedGridDelegate(
           crossAxisCount: 3,

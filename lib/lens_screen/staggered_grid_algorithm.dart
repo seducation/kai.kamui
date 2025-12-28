@@ -5,8 +5,8 @@ class StaggeredGridAlgorithm {
   static const List<List<QuiltedGridTile>> _tileBlocks = [
     // Block 1: Large tile on left (2x2), two small on right
     [QuiltedGridTile(2, 2), QuiltedGridTile(1, 1), QuiltedGridTile(1, 1)],
-    // Block 2: Large tile on right (2x2), two small on left
-    [QuiltedGridTile(1, 1), QuiltedGridTile(1, 1), QuiltedGridTile(2, 2)],
+    // Block 2: Large tile on right (2x2), two small on left (adjusted order for 3-col fit)
+    [QuiltedGridTile(1, 1), QuiltedGridTile(2, 2), QuiltedGridTile(1, 1)],
     // Block 3: All small tiles (row of 3)
     [QuiltedGridTile(1, 1), QuiltedGridTile(1, 1), QuiltedGridTile(1, 1)],
   ];

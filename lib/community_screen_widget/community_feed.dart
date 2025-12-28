@@ -71,6 +71,9 @@ class CommunityFeed extends StatelessWidget {
       // Check if we reached an injection point (10, 20, 30...) or end of list
       // Note: We use modulo 10 == 0 but need to handle specific injections
       if (indexPlusOne % 10 == 0 || indexPlusOne == products.length) {
+        // Capture the list for this closure
+        final batch = List<Product>.from(currentProductBatch);
+
         // Add current batch of products as a grid
         slivers.add(
           SliverPadding(
@@ -83,9 +86,8 @@ class CommunityFeed extends StatelessWidget {
                 crossAxisSpacing: 10.0,
               ),
               delegate: SliverChildBuilderDelegate(
-                (context, index) =>
-                    ProductCard(product: currentProductBatch[index]),
-                childCount: currentProductBatch.length,
+                (context, index) => ProductCard(product: batch[index]),
+                childCount: batch.length,
               ),
             ),
           ),

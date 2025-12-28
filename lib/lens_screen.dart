@@ -163,14 +163,11 @@ class _LensScreenState extends State<LensScreen> {
                 ),
               ),
             ),
-          SliverPadding(
-            padding: const EdgeInsets.all(4.0),
-            sliver: LensStaggeredGrid(
-              items: _items,
-              scrollController: _scrollController,
-              isLoading: _isLoading,
-              error: _error,
-            ),
+          LensStaggeredGrid(
+            items: _items,
+            scrollController: _scrollController,
+            isLoading: _isLoading,
+            error: _error,
           ),
           if (_isLoading)
             const SliverToBoxAdapter(
