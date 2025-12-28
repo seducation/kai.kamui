@@ -989,10 +989,14 @@ class AppwriteService {
     );
   }
 
-  Future<models.RowList> getProducts() async {
+  Future<models.RowList> getProducts({int limit = 25, String? cursor}) async {
     return _db.listRows(
       databaseId: Environment.appwriteDatabaseId,
       tableId: productsCollection,
+      queries: [
+        Query.limit(limit),
+        if (cursor != null) Query.cursorAfter(cursor),
+      ],
     );
   }
 

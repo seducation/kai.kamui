@@ -9,19 +9,52 @@ import '../grid/stories_grid.dart';
 
 class CommunityFeed extends StatelessWidget {
   final List<Product> products;
+  final ScrollController controller;
+  final List<Widget> headerWidgets;
+  final bool isLoadingMore;
 
-  const CommunityFeed({super.key, required this.products});
+  const CommunityFeed({
+    super.key,
+    required this.products,
+    required this.controller,
+    required this.headerWidgets,
+    required this.isLoadingMore,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (products.isEmpty) {
+    if (products.isEmpty && headerWidgets.isEmpty) {
       return const Center(child: Text('No products found.'));
     }
 
     return CustomScrollView(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      slivers: _buildFeedSlivers(context),
+      controller: controller, // Use the controller from parent
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        // Add headers as slivers
+        if (headerWidgets.isNotEmpty)
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => headerWidgets[index],
+              childCount: headerWidgets.length,
+            ),
+          ),
+
+        // Add feed content
+        ..._buildFeedSlivers(context),
+
+        // Add loading indicator at the bottom if loading more
+        if (isLoadingMore)
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+
+        // Add some bottom padding
+        const SliverToBoxAdapter(child: SizedBox(height: 20)),
+      ],
     );
   }
 
@@ -29,11 +62,14 @@ class CommunityFeed extends StatelessWidget {
     List<Widget> slivers = [];
     List<Product> currentProductBatch = [];
 
+    // If products match exactly injection intervals or less, logic still holds
+    // We just iterate through all products
     for (int i = 0; i < products.length; i++) {
       currentProductBatch.add(products[i]);
       int indexPlusOne = i + 1;
 
-      // Check if we reached an injection point (10, 20, 30) or end of list
+      // Check if we reached an injection point (10, 20, 30...) or end of list
+      // Note: We use modulo 10 == 0 but need to handle specific injections
       if (indexPlusOne % 10 == 0 || indexPlusOne == products.length) {
         // Add current batch of products as a grid
         slivers.add(
