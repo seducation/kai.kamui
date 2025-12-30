@@ -228,15 +228,80 @@ module.exports = async ({ req, res, log, error }) => {
         // Step 10: Paginate
         const paginatedFeed = paginateFeed(mixedFeed, safeOffset, safeLimit);
 
-        // Step 11: Record shown posts
-        await recordSeenPosts(databases, ownerId, sessionId, paginatedFeed.items);
+        // Step 11: Hydrate items with profile info and media URLs
+        const uniqueProfileIds = [...new Set(paginatedFeed.items
+            .filter(item => item.type === 'post')
+            .map(item => {
+                // profile_id comes as an array from Appwrite relationships
+                if (Array.isArray(item.profile_id) && item.profile_id.length > 0) {
+                    return item.profile_id[0];
+                }
+                return typeof item.profile_id === 'string' ? item.profile_id : null;
+            })
+            .filter(id => id))]; // Filter out nulls
 
-        log(`Feed generated: ${paginatedFeed.items.length} items (${paginatedFeed.hasMore ? 'more available' : 'end reached'})`);
+        const profilesMap = {};
+        if (uniqueProfileIds.length > 0) {
+            // Fetch profiles in batches if necessary (Appwrite limit is usually 100)
+            const profiles = await databases.listDocuments(
+                DATABASE_ID,
+                COLLECTIONS.PROFILES,
+                [Query.equal('$id', uniqueProfileIds)]
+            );
+            profiles.documents.forEach(p => {
+                profilesMap[p.$id] = p;
+            });
+        }
+
+        const hydratedItems = paginatedFeed.items.map(item => {
+            if (item.type !== 'post') return item;
+
+            // Normalize profile_id
+            let profileId = null;
+            if (Array.isArray(item.profile_id) && item.profile_id.length > 0) {
+                profileId = item.profile_id[0];
+            } else if (typeof item.profile_id === 'string') {
+                profileId = item.profile_id;
+            }
+
+            const profile = (profileId && profilesMap[profileId]) ? profilesMap[profileId] : {};
+            const bucketId = 'gvone'; // Hardcoded as per environment
+
+            // Construct media URLs
+            const mediaUrls = (item.file_ids || []).map(fileId =>
+                `${client.config.endpoint}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}&mode=admin`
+            );
+
+            // Construct profile image URL
+            let profileImageUrl = null;
+            if (profile.profileImageUrl) {
+                profileImageUrl = `${client.config.endpoint}/storage/buckets/${bucketId}/files/${profile.profileImageUrl}/view?project=${projectId}&mode=admin`;
+            }
+
+            return {
+                ...item,
+                userId: profileId || '', // Map normalized profile_id to userId for frontend
+                username: profile.name || 'Unknown',
+                profileImage: profileImageUrl,
+                mediaUrls: mediaUrls,
+                content: item.caption || '',
+                postId: item.$id
+            };
+        });
+
+        log(`Feed generated: ${hydratedItems.length} items (${paginatedFeed.hasMore ? 'more available' : 'end reached'})`);
+
+        // Step 12: Record shown posts (using original items for IDs is fine, but hydration doesn't hurt)
+        await recordSeenPosts(databases, ownerId, sessionId, paginatedFeed.items);
 
         // Return feed
         return res.json({
             success: true,
-            ...paginatedFeed,
+            items: hydratedItems,
+            offset: paginatedFeed.offset,
+            limit: paginatedFeed.limit,
+            total: paginatedFeed.total,
+            hasMore: paginatedFeed.hasMore,
             sessionContext: {
                 state: sessionContext.state,
                 adFatigue: sessionContext.adFatigue

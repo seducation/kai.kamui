@@ -51,7 +51,8 @@ class FeedController extends ChangeNotifier {
     try {
       // Call Cloud Function
       final execution = await _functions.createExecution(
-        functionId: 'generate-feed', // Replace with your actual function ID
+        functionId:
+            'generate_feed', // Updated to match user's Appwrite function ID
         body: jsonEncode({
           'sessionId': _sessionId,
           'offset': _offset,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:appwrite/appwrite.dart';
+import 'appwrite_service.dart';
+import 'auth_service.dart';
 
 import 'features/feed/models/feed_item.dart';
 import 'features/feed/models/post_item.dart' as feed_models;
@@ -32,12 +33,12 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
     super.initState();
 
     // Initialize feed controller
-    // Note: You'll need to inject AppwriteService dependencies
-    // This is a placeholder - adjust according to your actual Appwrite setup
+    final appwriteService = context.read<AppwriteService>();
+    final authService = context.read<AuthService>();
+
     _controller = FeedController(
-      client: context.read<Client>(),
-      userId: context
-          .read<String>(), // Replace with actual user ID provider if available
+      client: appwriteService.client,
+      userId: authService.currentUser?.id ?? '',
     );
 
     // Add scroll listener for pagination

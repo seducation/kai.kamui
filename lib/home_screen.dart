@@ -1,7 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'hmv_features_tabscreen.dart';
 import 'hmv_following_tabscreen.dart';
 import 'hmv_news_tabscreen.dart';
 import 'hmv_shorts_tabscreen.dart';
@@ -11,7 +10,9 @@ import 'hmv_question_tabscreen.dart';
 import 'hmv_files_tabscreen.dart';
 import 'hmv_music_tabscreen.dart';
 import 'hmv_photos_tabscreen.dart';
-import 'chats_screen.dart';
+
+import 'hmv_feature_tabscreen.dart';
+import 'cnm_chats_tabscreen.dart';
 import 'tab_manager_screen.dart';
 import 'appwrite_client.dart';
 
@@ -222,11 +223,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             onAddTab: _onAddTab,
           );
         } else if (name == 'chats') {
-          return const ChatsScreen();
+          return const CNMChatsTabscreen();
         } else if (name == 'shorts') {
           return const HMVShortsTabscreen();
         } else if (name == 'feature') {
-          return const HMVFeaturesTabscreen();
+          return const HmvFeatureTabScreen();
         } else if (name == 'videos') {
           return const HmvVideosTabScreen();
         } else if (name == 'news') {

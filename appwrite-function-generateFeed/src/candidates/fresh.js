@@ -16,8 +16,8 @@ async function getFreshPosts(databases, limit = POOL_SIZES.FRESH) {
             DATABASE_ID,
             COLLECTIONS.POSTS,
             [
-                Query.equal('status', 'active'),
-                Query.equal('isHidden', false),
+                // Query.equal('status', 'active'),
+                // Query.equal('isHidden', false),
                 Query.greaterThan('timestamp', oneDayAgo),
                 Query.orderDesc('timestamp'),
                 Query.limit(limit * 2) // Over-fetch to filter

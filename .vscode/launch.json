@@ -5,18 +5,27 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Flutter Web",
+            "name": "Flutter (Default Device)",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "Flutter Android (Emulator)",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "-d",
+                "emulator-5554"
+            ]
+        },
+        {
+            "name": "Flutter Web (Chrome)",
             "request": "launch",
             "type": "dart",
             "args": [
                 "-d",
                 "chrome"
             ]
-        },
-        {
-            "name": "Flutter Run",
-            "request": "launch",
-            "type": "dart"
         }
     ]
 }

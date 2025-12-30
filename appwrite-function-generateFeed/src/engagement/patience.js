@@ -24,8 +24,8 @@ function inferPatience(signals) {
 
     // Calculate scroll rate (posts per second)
     if (signals.length >= 2) {
-        const firstTime = new Date(signals[0].createdAt).getTime();
-        const lastTime = new Date(signals[signals.length - 1].createdAt).getTime();
+        const firstTime = new Date(signals[0].timestamp).getTime();
+        const lastTime = new Date(signals[signals.length - 1].timestamp).getTime();
         const timeSpan = (lastTime - firstTime) / 1000; // seconds
         const scrollRate = timeSpan > 0 ? signals.length / timeSpan : 0;
 

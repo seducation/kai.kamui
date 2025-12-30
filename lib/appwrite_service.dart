@@ -728,15 +728,6 @@ class AppwriteService {
       ...postData,
       'timestamp': DateTime.now().toIso8601String(),
       'author_id': postData['author_id'],
-      'status': 'active',
-      'isHidden': false,
-      'likes': 0,
-      'comments': 0,
-      'shares': 0,
-      'views': 0,
-      'reportCount': 0,
-      'is_nsfw': false,
-      'allow_share': true,
     };
 
     await _db.createRow(

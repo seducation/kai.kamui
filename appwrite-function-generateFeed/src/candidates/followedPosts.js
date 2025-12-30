@@ -46,8 +46,8 @@ async function getFollowedPosts(databases, ownerId, limit = POOL_SIZES.FOLLOWED)
             COLLECTIONS.POSTS,
             [
                 Query.equal('profile_id', followedProfileIds),
-                Query.equal('status', 'active'),
-                Query.equal('isHidden', false),
+                // Query.equal('status', 'active'),
+                // Query.equal('isHidden', false),
                 Query.orderDesc('timestamp'),
                 Query.limit(limit)
             ]

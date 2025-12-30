@@ -159,7 +159,7 @@ class _PostItemState extends State<PostItem> {
   }
 
   Future<void> _fetchPostAuthorsLocal() async {
-    if (_isLoadingAuthors) return;
+    if (!mounted || _isLoadingAuthors) return;
     setState(() {
       _isLoadingAuthors = true;
     });

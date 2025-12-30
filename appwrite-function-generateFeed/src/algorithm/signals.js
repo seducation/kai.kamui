@@ -13,10 +13,10 @@ async function getUserAffinity(databases, userId, creatorId) {
         // Get user's past interactions with this creator
         const signals = await databases.listDocuments(
             DATABASE_ID,
-            COLLECTIONS.USER_SIGNALS,
+            COLLECTIONS.OWNER_SIGNALS,
             [
-                Query.equal('userId', userId),
-                Query.greaterThan('createdAt', new Date(Date.now() - TIME.WEEK).toISOString()),
+                Query.equal('ownerId', userId), // userId param here is treated as ownerId
+                Query.greaterThan('timestamp', new Date(Date.now() - TIME.WEEK).toISOString()),
                 Query.limit(100)
             ]
         );

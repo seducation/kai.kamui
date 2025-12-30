@@ -16,12 +16,18 @@ const {
  */
 async function calculateScore(post, databases, userId, sessionContext) {
     // Base signals
-    const recencyScore = calculateRecencyScore(post.createdAt);
+    // Use timestamp as primary, fallback to createdAt or current time if missing
+    const postTime = post.timestamp || post.createdAt || new Date().toISOString();
+    const recencyScore = calculateRecencyScore(postTime);
+
     const engagementScore = calculateEngagementScore(post.engagementScore || 0);
-    const diversityScore = calculateDiversityScore(post.userId, sessionContext.creatorCounts);
+
+    // Use profile_id as primary author identifier
+    const authorId = post.profile_id || post.userId || '';
+    const diversityScore = calculateDiversityScore(authorId, sessionContext.creatorCounts);
 
     // User-specific affinity
-    const affinityScore = await getUserAffinity(databases, userId, post.userId);
+    const affinityScore = await getUserAffinity(databases, userId, authorId);
 
     // Session-specific adjustments
     let sessionBoost = 0;

@@ -47,8 +47,8 @@ async function getExplorationPosts(databases, limit = POOL_SIZES.EXPLORATION) {
             DATABASE_ID,
             COLLECTIONS.POSTS,
             [
-                Query.equal('status', 'active'),
-                Query.equal('isHidden', false),
+                // Query.equal('status', 'active'),
+                // Query.equal('isHidden', false),
                 Query.orderDesc('timestamp'),
                 Query.limit(100) // Get larger pool
             ]

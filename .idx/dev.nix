@@ -34,9 +34,7 @@
           "run"
           "--machine"
           "-d"
-          "android"
-          "-d"
-          "localhost:5555"
+          "emulator-5554"
         ];
         manager = "flutter";
       };
