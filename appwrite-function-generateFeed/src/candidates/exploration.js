@@ -7,7 +7,7 @@ const { Query } = require('node-appwrite');
  * @param {number} limit - Maximum posts to fetch
  * @returns {Promise<Array>} Array of posts
  */
-async function getViralPosts(databases, limit = POOL_SIZES.VIRAL) {
+async function getViralPosts(databases, limit = POOL_SIZES.VIRAL, ...extraQueries) {
     try {
         const posts = await databases.listDocuments(
             DATABASE_ID,
@@ -18,7 +18,8 @@ async function getViralPosts(databases, limit = POOL_SIZES.VIRAL) {
                 // Query.greaterThan('likes', 100), // Removed due to missing schema
                 // Query.orderDesc('likes'), // Removed due to missing schema
                 Query.orderDesc('timestamp'),
-                Query.limit(limit)
+                Query.limit(limit),
+                ...extraQueries
             ]
         );
 
@@ -40,7 +41,7 @@ async function getViralPosts(databases, limit = POOL_SIZES.VIRAL) {
  * @param {number} limit - Maximum posts to fetch
  * @returns {Promise<Array>} Array of posts
  */
-async function getExplorationPosts(databases, limit = POOL_SIZES.EXPLORATION) {
+async function getExplorationPosts(databases, limit = POOL_SIZES.EXPLORATION, ...extraQueries) {
     try {
         // Get recent posts (random sampling simulated by recent posts)
         const posts = await databases.listDocuments(
@@ -50,7 +51,8 @@ async function getExplorationPosts(databases, limit = POOL_SIZES.EXPLORATION) {
                 // Query.equal('status', 'active'),
                 // Query.equal('isHidden', false),
                 Query.orderDesc('timestamp'),
-                Query.limit(100) // Get larger pool
+                Query.limit(100), // Get larger pool
+                ...extraQueries
             ]
         );
 

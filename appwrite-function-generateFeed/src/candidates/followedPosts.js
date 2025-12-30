@@ -8,7 +8,7 @@ const { Query } = require('node-appwrite');
  * @param {number} limit - Maximum posts to fetch
  * @returns {Promise<Array>} Array of posts
  */
-async function getFollowedPosts(databases, ownerId, limit = POOL_SIZES.FOLLOWED) {
+async function getFollowedPosts(databases, ownerId, limit = POOL_SIZES.FOLLOWED, ...extraQueries) {
     try {
         // Step 1: Get all profiles owned by this user
         const userProfiles = await databases.listDocuments(
@@ -49,7 +49,8 @@ async function getFollowedPosts(databases, ownerId, limit = POOL_SIZES.FOLLOWED)
                 // Query.equal('status', 'active'),
                 // Query.equal('isHidden', false),
                 Query.orderDesc('timestamp'),
-                Query.limit(limit)
+                Query.limit(limit),
+                ...extraQueries
             ]
         );
 

@@ -7,7 +7,7 @@ const { Query } = require('node-appwrite');
  * @param {number} limit - Maximum posts to fetch
  * @returns {Promise<Array>} Array of posts
  */
-async function getTrendingPosts(databases, limit = POOL_SIZES.TRENDING) {
+async function getTrendingPosts(databases, limit = POOL_SIZES.TRENDING, ...extraQueries) {
     try {
         // Since 'likes' count is not on the post document, we aggregate from the 'likes' collection
         // 1. Get recent likes (last 24 hours) to determine what's trending NOW
@@ -31,7 +31,8 @@ async function getTrendingPosts(databases, limit = POOL_SIZES.TRENDING) {
                     // Query.equal('status', 'active'),
                     // Query.equal('isHidden', false),
                     Query.orderDesc('timestamp'),
-                    Query.limit(limit)
+                    Query.limit(limit),
+                    ...extraQueries
                 ]
             );
             return fallbackPosts.documents.map(p => ({ ...p, sourcePool: 'trending', type: 'post' }));
@@ -61,6 +62,7 @@ async function getTrendingPosts(databases, limit = POOL_SIZES.TRENDING) {
                 Query.equal('$id', topPostIds),
                 // Query.equal('status', 'active'),
                 // Query.equal('isHidden', false)
+                ...extraQueries
             ]
         );
 

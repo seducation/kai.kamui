@@ -18,8 +18,14 @@ import 'package:url_launcher/url_launcher.dart';
 class PostItem extends StatefulWidget {
   final Post post;
   final String profileId;
+  final String? heroTagPrefix;
 
-  const PostItem({super.key, required this.post, required this.profileId});
+  const PostItem({
+    super.key,
+    required this.post,
+    required this.profileId,
+    this.heroTagPrefix,
+  });
 
   @override
   State<PostItem> createState() => _PostItemState();
@@ -596,7 +602,8 @@ class _PostItemState extends State<PostItem> {
                 );
               },
               child: Hero(
-                tag: 'post_media_${widget.post.id}_0',
+                tag:
+                    '${widget.heroTagPrefix ?? 'post_media'}_${widget.post.id}_0',
                 child: Stack(
                   alignment: Alignment.center,
                   children: [

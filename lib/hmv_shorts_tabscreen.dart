@@ -1,22 +1,20 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:my_app/appwrite_service.dart';
-import 'package:my_app/model/post.dart';
-import 'package:my_app/profile_page.dart';
+import 'package:my_app/auth_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_app/comments_screen.dart';
-import 'dart:math';
-
-import 'model/profile.dart';
 import 'package:video_player/video_player.dart';
 
-double calculateScore(Post post) {
-  final hoursSincePosted = DateTime.now().difference(post.timestamp).inHours;
-  final score = ((post.stats.likes * 1) + (post.stats.comments * 5) + (post.stats.shares * 10)) /
-      pow(hoursSincePosted + 2, 1.5);
-  return score;
-}
+import 'package:my_app/model/post.dart';
+import 'package:my_app/model/profile.dart' as profile_model;
+import 'package:my_app/profile_page.dart';
+
+// Feed imports
+import 'features/feed/controllers/feed_controller.dart';
+import 'features/feed/models/feed_item.dart' as feed_models;
+import 'features/feed/models/post_item.dart' as feed_models;
 
 class HMVShortsTabscreen extends StatefulWidget {
   const HMVShortsTabscreen({super.key});
@@ -26,215 +24,109 @@ class HMVShortsTabscreen extends StatefulWidget {
 }
 
 class _HMVShortsTabscreenState extends State<HMVShortsTabscreen> {
-  late AppwriteService appwriteService;
-  List<Post>? _posts;
-  bool _isLoading = true;
-  String? _profileId;
+  late FeedController _controller;
+  final PageController _pageController = PageController();
 
   @override
   void initState() {
     super.initState();
-    appwriteService = context.read<AppwriteService>();
-    _fetchPosts();
+    final appwriteService = context.read<AppwriteService>();
+    final authService = context.read<AuthService>();
+
+    // Initialize FeedController with 'video' postType
+    _controller = FeedController(
+      client: appwriteService.client,
+      userId: authService.currentUser?.id ?? '',
+      postType: 'video',
+    );
   }
 
-  Future<void> _fetchPosts() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      final user = await appwriteService.getUser();
-      if (user != null) {
-        final profiles = await appwriteService.getUserProfiles(
-          ownerId: user.$id,
-        );
-        if (profiles.rows.isNotEmpty) {
-          _profileId = profiles.rows.first.$id;
-        }
-      }
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
 
-      final results = await Future.wait([
-        appwriteService.getPosts(),
-        appwriteService.getProfiles(),
-      ]);
-
-      final postsResponse = results[0];
-      final profilesResponse = results[1];
-
-      final profilesMap = {
-        for (var doc in profilesResponse.rows) doc.$id: doc.data,
-      };
-
-      final postFutures = postsResponse.rows.map((row) async {
-
-        final profileIds = row.data['profile_id'] as List?;
-        if (profileIds == null || profileIds.isEmpty) {
-          return null;
-        }
-        final profileId = profileIds.first as String?;
-        if (profileId == null) {
-          return null;
-        }
-
-        final creatorProfileData = profilesMap[profileId];
-        if (creatorProfileData == null) {
-          return null;
-        }
-
-        final author = Profile.fromMap(creatorProfileData, profileId);
-
-        final updatedAuthor = Profile(
-          id: author.id,
-          name: author.name,
-          type: author.type,
-          bio: author.bio,
-          profileImageUrl:
-              author.profileImageUrl != null &&
-                      author.profileImageUrl!.isNotEmpty
-                  ? appwriteService.getFileViewUrl(author.profileImageUrl!)
-                  : 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
-          ownerId: author.ownerId,
-          createdAt: author.createdAt,
-        );
-
-        final originalAuthorIds = row.data['author_id'] as List?;
-        final originalAuthorId = (originalAuthorIds?.isNotEmpty ?? false)
-            ? originalAuthorIds!.first as String?
-            : null;
-
-        Profile? originalAuthor;
-        if (originalAuthorId != null && originalAuthorId != profileId) {
-          final originalAuthorProfileData = profilesMap[originalAuthorId];
-          if (originalAuthorProfileData != null) {
-            originalAuthor = Profile.fromMap(
-              originalAuthorProfileData,
-              originalAuthorId,
-            );
-          }
-        }
-
-        final fileIdsData = row.data['file_ids'];
-        final List<String> fileIds = fileIdsData is List
-            ? List<String>.from(fileIdsData.map((id) => id.toString()))
-            : [];
-
-        List<String> mediaUrls = [];
-        if (fileIds.isNotEmpty) {
-          mediaUrls = fileIds
-              .map((id) => appwriteService.getFileViewUrl(id))
-              .toList();
-        }
-
-        String? postTypeString = row.data['type'];
-        final postType = await _getPostType(postTypeString, row.data['linkUrl'], fileIds);
-
-        final postStats = PostStats(
-          likes: row.data['likes'] ?? 0,
-          comments: row.data['comments'] ?? 0,
-          shares: row.data['shares'] ?? 0,
-          views: row.data['views'] ?? 0,
-        );
-
-        return Post(
-          id: row.$id,
-          author: updatedAuthor,
-          originalAuthor: originalAuthor,
-          timestamp:
-              DateTime.tryParse(row.data['timestamp'] ?? '') ??
-                  DateTime.now(),
-          contentText: row.data['caption'] ?? '',
-          mediaUrls: mediaUrls,
-          type: postType,
-          stats: postStats,
-          linkUrl: row.data['linkUrl'],
-          linkTitle: row.data['titles'],
-          authorIds: (row.data['author_id'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList(),
-          profileIds: (row.data['profile_id'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList(),
-        );
-      });
-
-      final posts = (await Future.wait(postFutures))
-          .whereType<Post>()
-          .where((post) => post.type == PostType.video)
-          .toList();
-
-      if (!mounted) return;
-
-      _rankPosts(posts);
-
-      setState(() {
-        _posts = posts;
-        _isLoading = false;
-      });
-    } catch (e, stackTrace) {
-      debugPrint('Error fetching data in HMVShortsTabscreen: $e');
-      debugPrint('Stack trace: $stackTrace');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+  void _onPageChanged(int index) {
+    // Trigger pagination when user is 3 items away from the end
+    if (index >= _controller.feedItems.length - 3) {
+      _controller.loadFeed();
     }
   }
 
-  Future<PostType> _getPostType(String? type, String? linkUrl, List<String> fileIds) async {
-    if (type == 'video') {
-      return PostType.video;
-    }
-    if (fileIds.isNotEmpty) {
-      try {
-        final file = await appwriteService.getFile(fileIds.first);
-        if (file.mimeType.startsWith('video/')) {
-          return PostType.video;
-        }
-        return PostType.image;
-      } catch (e) {
-        debugPrint('Error fetching file metadata: $e');
-        return PostType.image; // Assume image if metadata fetch fails
-      }
-    }
-    if (linkUrl != null && linkUrl.isNotEmpty) {
-      return PostType.linkPreview;
-    }
-    return PostType.text;
-  }
+  Post? _convertToModelPost(feed_models.FeedItem item) {
+    if (item is! feed_models.PostItem)
+      return null; // Skip non-post items for now in Shorts
 
-  void _rankPosts(List<Post> posts) {
-    for (var post in posts) {
-      post.score = calculateScore(post);
-    }
-    posts.sort((a, b) => b.score.compareTo(a.score));
+    // Infer post type - generally video for this screen, but check extension to be safe
+    PostType type = PostType.video;
+
+    return Post(
+      id: item.postId,
+      author: profile_model.Profile(
+        id: item.userId,
+        name: item.username,
+        type: 'profile',
+        profileImageUrl: item.profileImage,
+        ownerId: '',
+        createdAt: DateTime.now(),
+      ),
+      timestamp: item.createdAt,
+      contentText: item.content,
+      type: type,
+      mediaUrls: item.mediaUrls,
+      stats: PostStats(likes: item.engagementScore, views: item.viewCount),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
+    return ChangeNotifierProvider.value(
+      value: _controller,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Consumer<FeedController>(
+          builder: (context, controller, child) {
+            if (!controller.isLoading && controller.feedItems.isEmpty) {
+              if (controller.error != null) {
+                return Center(
+                  child: Text(
+                    'Error: ${controller.error}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                );
+              }
+              return const Center(
+                child: Text(
+                  "No shorts available.",
+                  style: TextStyle(color: Colors.white),
+                ),
+              );
+            }
 
-    if (_posts == null || _posts!.isEmpty) {
-      return const Center(
-        child: Text("No shorts available."),
-      );
-    }
+            return PageView.builder(
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              itemCount: controller.feedItems.length,
+              onPageChanged: _onPageChanged,
+              itemBuilder: (context, index) {
+                final item = controller.feedItems[index];
 
-    return PageView.builder(
-      scrollDirection: Axis.vertical,
-      itemCount: _posts!.length,
-      itemBuilder: (context, index) {
-        final post = _posts![index];
-        return ShortsPage(
-          post: post,
-          profileId: _profileId ?? '',
-        );
-      },
+                // Convert FeedItem to Post model
+                final post = _convertToModelPost(item);
+
+                if (post == null) {
+                  // Handle non-post items gracefully (e.g. ads could be supported later)
+                  return const SizedBox.shrink();
+                }
+
+                return ShortsPage(post: post, profileId: controller.userId);
+              },
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -267,14 +159,17 @@ class _ShortsPageState extends State<ShortsPage> {
     _initializeState();
 
     if (widget.post.mediaUrls != null && widget.post.mediaUrls!.isNotEmpty) {
-      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.post.mediaUrls!.first))
-        ..initialize().then((_) {
-          if (mounted) {
-            setState(() {});
-            _controller?.play();
-            _controller?.setLooping(true);
-          }
-        });
+      _controller =
+          VideoPlayerController.networkUrl(
+              Uri.parse(widget.post.mediaUrls!.first),
+            )
+            ..initialize().then((_) {
+              if (mounted) {
+                setState(() {});
+                _controller?.play();
+                _controller?.setLooping(true);
+              }
+            });
     }
   }
 
@@ -314,9 +209,9 @@ class _ShortsPageState extends State<ShortsPage> {
     if (!mounted) return;
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('You must be logged in to like posts.'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You must be logged in to like posts.')),
+      );
       return;
     }
 
@@ -332,7 +227,10 @@ class _ShortsPageState extends State<ShortsPage> {
 
     try {
       await _appwriteService.updatePostLikes(
-          widget.post.id, newLikeCount, widget.post.timestamp.toIso8601String());
+        widget.post.id,
+        newLikeCount,
+        widget.post.timestamp.toIso8601String(),
+      );
       await _prefs!.setBool(widget.post.id, newLikedState);
     } catch (e) {
       if (mounted) {
@@ -340,13 +238,13 @@ class _ShortsPageState extends State<ShortsPage> {
           _isLiked = !newLikedState;
           _likeCount = _isLiked ? newLikeCount + 1 : newLikeCount - 1;
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error: $e'),
-        ));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
-  
+
   void _openComments() async {
     final result = await Navigator.push(
       context,
@@ -360,49 +258,56 @@ class _ShortsPageState extends State<ShortsPage> {
     }
   }
 
- @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    body: GestureDetector(
-      onTap: () {
-        if (_controller != null) {
-          setState(() {
-            if (_controller!.value.isPlaying) {
-              _controller!.pause();
-            } else {
-              _controller!.play();
-            }
-          });
-        }
-      },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Video player
-          _controller != null && _controller!.value.isInitialized
-              ? AspectRatio(
-                  aspectRatio: _controller!.value.aspectRatio,
-                  child: VideoPlayer(_controller!),
-                )
-              : Container(color: Colors.black, child: const Center(child: CircularProgressIndicator())),
-          // Gradient overlay for text readability
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [const Color.fromARGB(153, 0, 0, 0), Colors.transparent, const Color.fromARGB(153, 0, 0, 0)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                stops: const [0.0, 0.5, 1.0],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: GestureDetector(
+        onTap: () {
+          if (_controller != null) {
+            setState(() {
+              if (_controller!.value.isPlaying) {
+                _controller!.pause();
+              } else {
+                _controller!.play();
+              }
+            });
+          }
+        },
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Video player
+            _controller != null && _controller!.value.isInitialized
+                ? AspectRatio(
+                    aspectRatio: _controller!.value.aspectRatio,
+                    child: VideoPlayer(_controller!),
+                  )
+                : Container(
+                    color: Colors.black,
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+            // Gradient overlay for text readability
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color.fromARGB(153, 0, 0, 0),
+                    Colors.transparent,
+                    const Color.fromARGB(153, 0, 0, 0),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.5, 1.0],
+                ),
               ),
             ),
-          ),
-          // UI elements
-          _buildUiOverlay(),
-        ],
+            // UI elements
+            _buildUiOverlay(),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildUiOverlay() {
     return Padding(
@@ -414,16 +319,14 @@ Widget build(BuildContext context) {
           const Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-             // Icon(Icons.camera_alt_outlined, color: Colors.white, size: 30)
+              // Icon(Icons.camera_alt_outlined, color: Colors.white, size: 30)
             ],
           ),
           // Bottom section with post info and actions
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Expanded(
-                child: _buildPostInfo(),
-              ),
+              Expanded(child: _buildPostInfo()),
               _buildActionButtons(),
             ],
           ),
@@ -441,14 +344,19 @@ Widget build(BuildContext context) {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => ProfilePageScreen(profileId: widget.post.author.id)),
+              MaterialPageRoute(
+                builder: (context) =>
+                    ProfilePageScreen(profileId: widget.post.author.id),
+              ),
             );
           },
           child: Row(
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundImage: CachedNetworkImageProvider(widget.post.author.profileImageUrl!),
+                backgroundImage: CachedNetworkImageProvider(
+                  widget.post.author.profileImageUrl!,
+                ),
               ),
               const SizedBox(width: 10),
               Text(
@@ -494,16 +402,18 @@ Widget build(BuildContext context) {
           icon: Icons.reply,
           label: _formatCount(widget.post.stats.shares),
         ),
-         const SizedBox(height: 20),
-        _buildActionButton(
-          icon: Icons.more_horiz,
-          label: 'More',
-        ),
+        const SizedBox(height: 20),
+        _buildActionButton(icon: Icons.more_horiz, label: 'More'),
       ],
     );
   }
 
-  Widget _buildActionButton({required IconData icon, required String label, VoidCallback? onTap, Color? color}) {
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    VoidCallback? onTap,
+    Color? color,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Column(

@@ -8,7 +8,7 @@ const { Query } = require('node-appwrite');
  * @param {number} limit - Maximum posts to fetch
  * @returns {Promise<Array>} Array of posts
  */
-async function getInterestBasedPosts(databases, userInterests, limit = POOL_SIZES.INTEREST) {
+async function getInterestBasedPosts(databases, userInterests, limit = POOL_SIZES.INTEREST, ...extraQueries) {
     try {
         if (!userInterests || userInterests.length === 0) {
             return [];
@@ -23,7 +23,8 @@ async function getInterestBasedPosts(databases, userInterests, limit = POOL_SIZE
                 Query.equal('status', 'active'),
                 Query.equal('isHidden', false),
                 Query.orderDesc('timestamp'),
-                Query.limit(limit)
+                Query.limit(limit),
+                ...extraQueries
             ]
         );
 

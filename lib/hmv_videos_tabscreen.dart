@@ -110,9 +110,9 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
           bio: author.bio,
           profileImageUrl:
               author.profileImageUrl != null &&
-                      author.profileImageUrl!.isNotEmpty
-                  ? _appwriteService.getFileViewUrl(author.profileImageUrl!)
-                  : 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
+                  author.profileImageUrl!.isNotEmpty
+              ? _appwriteService.getFileViewUrl(author.profileImageUrl!)
+              : 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png',
           ownerId: author.ownerId,
           createdAt: author.createdAt,
         );
@@ -146,9 +146,15 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
         }
 
         String? postTypeString = row.data['type'];
-        final postType = await _getPostType(postTypeString, row.data['linkUrl'], fileIds);
+        final postType = await _getPostType(
+          postTypeString,
+          row.data['linkUrl'],
+          fileIds,
+        );
 
-        debugPrint('HmvVideosTabScreen: Post ${row.$id} has postType: $postType');
+        debugPrint(
+          'HmvVideosTabScreen: Post ${row.$id} has postType: $postType',
+        );
 
         final postStats = PostStats(
           likes: row.data['likes'] ?? 0,
@@ -162,8 +168,7 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
           author: updatedAuthor,
           originalAuthor: originalAuthor,
           timestamp:
-              DateTime.tryParse(row.data['timestamp'] ?? '') ??
-                  DateTime.now(),
+              DateTime.tryParse(row.data['timestamp'] ?? '') ?? DateTime.now(),
           contentText: row.data['caption'] ?? '',
           mediaUrls: mediaUrls,
           type: postType,
@@ -210,7 +215,11 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
     }
   }
 
-  Future<PostType> _getPostType(String? type, String? linkUrl, List<String> fileIds) async {
+  Future<PostType> _getPostType(
+    String? type,
+    String? linkUrl,
+    List<String> fileIds,
+  ) async {
     if (type == 'video') {
       return PostType.video;
     }
@@ -268,7 +277,11 @@ class _HmvVideosTabScreenState extends State<HmvVideosTabScreen> {
               itemCount: _posts.length,
               itemBuilder: (context, index) {
                 final post = _posts[index];
-                return PostItem(post: post, profileId: _profileId ?? '');
+                return PostItem(
+                  post: post,
+                  profileId: _profileId ?? '',
+                  heroTagPrefix: 'hmv_videos',
+                );
               },
             ),
     );

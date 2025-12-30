@@ -209,6 +209,7 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
         return widgets.PostItem(
           post: _convertToModelPost(item),
           profileId: controller.userId,
+          heroTagPrefix: 'hmv_feature',
         );
 
       case 'ad':

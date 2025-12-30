@@ -7,7 +7,7 @@ const { Query } = require('node-appwrite');
  * @param {number} limit - Maximum posts to fetch
  * @returns {Promise<Array>} Array of posts
  */
-async function getFreshPosts(databases, limit = POOL_SIZES.FRESH) {
+async function getFreshPosts(databases, limit = POOL_SIZES.FRESH, ...extraQueries) {
     try {
         // Get recent posts from non-established creators
         const oneDayAgo = new Date(Date.now() - TIME.DAY).toISOString();
@@ -20,7 +20,8 @@ async function getFreshPosts(databases, limit = POOL_SIZES.FRESH) {
                 // Query.equal('isHidden', false),
                 Query.greaterThan('timestamp', oneDayAgo),
                 Query.orderDesc('timestamp'),
-                Query.limit(limit * 2) // Over-fetch to filter
+                Query.limit(limit * 2), // Over-fetch to filter
+                ...extraQueries
             ]
         );
 

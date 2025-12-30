@@ -80,8 +80,15 @@ class FeedController extends ChangeNotifier {
       } else {
         final newItems = items
             .map((item) => FeedItem.fromJson(item as Map<String, dynamic>))
+            .where(
+              (newItem) =>
+                  !_feedItems.any((existing) => existing.id == newItem.id),
+            )
             .toList();
+
         _feedItems.addAll(newItems);
+        // Always increment offset by the number of items fetched from server, not just unique ones,
+        // to maintain sync with server pagination logic.
         _offset += items.length;
         _hasMore = result['hasMore'] ?? false;
       }

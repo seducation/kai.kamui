@@ -78,6 +78,6 @@ module.exports = {
     FEED: {
         DEFAULT_LIMIT: 20,       // Posts per page
         MAX_LIMIT: 50,          // Maximum posts per request
-        MAX_CREATOR_REPEAT: 3,  // Max posts from same creator
+        MAX_CREATOR_REPEAT: 5,  // Max posts from same creator
     },
 };
