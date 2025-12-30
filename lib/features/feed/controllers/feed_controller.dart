@@ -20,6 +20,8 @@ class FeedController extends ChangeNotifier {
   int _offset = 0;
   String? _error;
 
+  bool _isDisposed = false;
+
   FeedController({
     required Client client,
     required String userId,
@@ -30,6 +32,12 @@ class FeedController extends ChangeNotifier {
        _postType = postType {
     _sessionId = const Uuid().v4(); // Generate unique session ID
     loadFeed();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 
   // Getters
@@ -46,7 +54,7 @@ class FeedController extends ChangeNotifier {
 
     _isLoading = true;
     _error = null;
-    notifyListeners();
+    if (!_isDisposed) notifyListeners();
 
     try {
       // Call Cloud Function
@@ -96,8 +104,10 @@ class FeedController extends ChangeNotifier {
       _error = e.toString();
       debugPrint('Error loading feed: $e');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
