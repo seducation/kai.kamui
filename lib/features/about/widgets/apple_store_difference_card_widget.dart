@@ -17,7 +17,7 @@ class AppleStoreDifferenceCard extends StatelessWidget {
               style: TextStyle(fontSize: 28, height: 1.1),
               children: [
                 TextSpan(
-                  text: "The Apple Store difference. ",
+                  text: "The gvone Store difference. ",
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
