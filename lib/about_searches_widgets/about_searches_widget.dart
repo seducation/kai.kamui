@@ -261,17 +261,7 @@ class _AboutSearchesState extends State<AboutSearches> {
                     _buildToolIcon(Icons.settings, 'S5'),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildToolIcon(Icons.settings, 'S6'),
-                    _buildToolIcon(Icons.settings, 'S7'),
-                    _buildToolIcon(Icons.settings, 'S8'),
-                    _buildToolIcon(Icons.settings, 'S9'),
-                    _buildToolIcon(Icons.settings, 'S10'),
-                  ],
-                ),
+                
                 const SizedBox(height: 24),
                 const Text(
                   'Insight',
