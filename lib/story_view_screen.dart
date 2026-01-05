@@ -32,11 +32,12 @@ class _StoryViewScreenState extends State<StoryViewScreen> {
   void _loadStory(Story story) {
     _videoController?.dispose();
     if (story.mediaType == 'video') {
-      _videoController = VideoPlayerController.networkUrl(Uri.parse(story.mediaUrl))
-        ..initialize().then((_) {
-          setState(() {});
-          _videoController!.play();
-        });
+      _videoController =
+          VideoPlayerController.networkUrl(Uri.parse(story.mediaUrl))
+            ..initialize().then((_) {
+              setState(() {});
+              _videoController!.play();
+            });
     } else {
       _videoController = null;
     }
@@ -52,7 +53,6 @@ class _StoryViewScreenState extends State<StoryViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       body: GestureDetector(
         onTapDown: (details) {
           final screenWidth = MediaQuery.of(context).size.width;
@@ -93,12 +93,14 @@ class _StoryViewScreenState extends State<StoryViewScreen> {
                   child: Row(
                     children: [
                       CircleAvatar(
-                        backgroundImage: NetworkImage(widget.profile.profileImageUrl ?? ''),
+                        backgroundImage:
+                            NetworkImage(widget.profile.profileImageUrl ?? ''),
                       ),
                       const SizedBox(width: 10),
                       Text(
                         widget.profile.name,
-                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 16),
                       ),
                       const Spacer(),
                       IconButton(
@@ -143,6 +145,7 @@ class _StoryViewScreenState extends State<StoryViewScreen> {
       ),
     );
   }
+
   void _nextStory() {
     if (_currentIndex < widget.stories.length - 1) {
       _pageController.nextPage(

@@ -86,7 +86,6 @@ class _HMVShortsTabscreenState extends State<HMVShortsTabscreen> {
     return ChangeNotifierProvider.value(
       value: _controller,
       child: Scaffold(
-        backgroundColor: Colors.black,
         body: Consumer<FeedController>(
           builder: (context, controller, child) {
             if (!controller.isLoading && controller.feedItems.isEmpty) {

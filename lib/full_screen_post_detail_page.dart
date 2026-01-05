@@ -129,7 +129,6 @@ class _FullScreenPostDetailPageState extends State<FullScreenPostDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [

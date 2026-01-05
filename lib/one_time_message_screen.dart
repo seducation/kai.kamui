@@ -33,7 +33,6 @@ class OneTimeMessageScreenState extends State<OneTimeMessageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       body: Center(child: Image.network(widget.message.data['message'])),
     );
   }

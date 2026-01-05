@@ -15,7 +15,6 @@ class CalendarPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       body: SafeArea(
         child: Column(
           children: [
@@ -150,7 +149,8 @@ class TimeGrid extends StatelessWidget {
                           return Container(
                             height: hourHeight,
                             decoration: BoxDecoration(
-                              border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                              border: Border(
+                                  top: BorderSide(color: Colors.grey[200]!)),
                             ),
                           );
                         }),
@@ -163,16 +163,16 @@ class TimeGrid extends StatelessWidget {
               // Layer 2: Events
               // Client Meeting: Mon (0), 10am - 12pm
               _buildEventBlock(dayWidth, 0, 10, 2, "Client Meeting"),
-              
+
               // Project Meeting: Mon (0), 2pm - 4pm
               _buildEventBlock(dayWidth, 0, 14, 2, "Project Meeting"),
-              
+
               // Football Match: Wed (2), 2pm - 5pm
               _buildEventBlock(dayWidth, 2, 14, 3, "Football Match"),
 
               // Joe's Birthday: Fri (4), 7pm - 8pm
-              _buildEventBlock(dayWidth, 4, 19, 2, "Joe's Birthday"), // Made height 2h to match visual length in image
-
+              _buildEventBlock(dayWidth, 4, 19, 2,
+                  "Joe's Birthday"), // Made height 2h to match visual length in image
             ],
           ),
         );
@@ -180,7 +180,8 @@ class TimeGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildEventBlock(double dayWidth, int dayIndex, int startHour, int duration, String title) {
+  Widget _buildEventBlock(double dayWidth, int dayIndex, int startHour,
+      int duration, String title) {
     return Positioned(
       top: startHour * hourHeight,
       left: 50 + (dayIndex * dayWidth) + 5, // 50 for time column, 5 for padding

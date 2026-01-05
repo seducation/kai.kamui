@@ -243,7 +243,6 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
         _authService.currentUser != null &&
         _profile!.ownerId == _authService.currentUser!.id;
     return Scaffold(
-      backgroundColor: Colors.white,
       body: _isLoading || _tabController == null
           ? const Center(child: CircularProgressIndicator())
           : _profile == null
@@ -256,7 +255,6 @@ class _ProfilePageScreenState extends State<ProfilePageScreen>
                         expandedHeight: 180.0,
                         pinned: true,
                         floating: false,
-                        backgroundColor: Colors.white,
                         leading: IconButton(
                           icon: const Icon(
                             Icons.arrow_back,
@@ -667,7 +665,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Container(color: Colors.white, child: _tabBar);
+    return Container(child: _tabBar);
   }
 
   @override

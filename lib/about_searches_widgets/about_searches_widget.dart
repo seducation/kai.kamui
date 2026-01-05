@@ -261,7 +261,6 @@ class _AboutSearchesState extends State<AboutSearches> {
                     _buildToolIcon(Icons.settings, 'S5'),
                   ],
                 ),
-                
                 const SizedBox(height: 24),
                 const Text(
                   'Insight',
@@ -395,7 +394,6 @@ class _AboutSearchesState extends State<AboutSearches> {
               ),
             ),
           ),
-          backgroundColor: Colors.white,
           pinned: true,
         ),
         if (_isLoading)
@@ -433,7 +431,6 @@ class _AboutSearchesState extends State<AboutSearches> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: _isSearching ? _buildSearchLayout() : _buildInitialLayout(),
     );
   }

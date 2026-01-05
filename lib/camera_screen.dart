@@ -126,7 +126,7 @@ class _CameraScreenState extends State<CameraScreen> {
     _controller?.dispose();
     super.dispose();
   }
-  
+
   void _showLiveOptions() {
     showModalBottomSheet(
       context: context,
@@ -150,7 +150,6 @@ class _CameraScreenState extends State<CameraScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  
                   Navigator.pop(context);
                 },
                 child: const Text('Start Live'),
@@ -162,12 +161,10 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     if (_isUploading) {
       return const Scaffold(
-        backgroundColor: Colors.black,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -190,11 +187,9 @@ class _CameraScreenState extends State<CameraScreen> {
             child: FittedBox(
               fit: BoxFit.cover,
               child: SizedBox(
-                width:
-                    _controller!.value.previewSize?.height ??
+                width: _controller!.value.previewSize?.height ??
                     MediaQuery.of(context).size.width,
-                height:
-                    _controller!.value.previewSize?.width ??
+                height: _controller!.value.previewSize?.width ??
                     MediaQuery.of(context).size.height,
                 child: CameraPreview(_controller!),
               ),
@@ -203,7 +198,6 @@ class _CameraScreenState extends State<CameraScreen> {
         : const Center(child: CircularProgressIndicator(color: Colors.white));
 
     return Scaffold(
-      backgroundColor: Colors.black,
       body: Stack(
         children: [
           preview,
@@ -321,12 +315,14 @@ class _CameraScreenState extends State<CameraScreen> {
           children: [
             GestureDetector(
               onTap: () => setState(() => _selectedMode = CameraMode.gallery),
-              child: _buildModeText("Gallery", isActive: _selectedMode == CameraMode.gallery),
+              child: _buildModeText("Gallery",
+                  isActive: _selectedMode == CameraMode.gallery),
             ),
             const SizedBox(width: 20),
             GestureDetector(
               onTap: () => setState(() => _selectedMode = CameraMode.camera),
-              child: _buildModeText("Camera", isActive: _selectedMode == CameraMode.camera),
+              child: _buildModeText("Camera",
+                  isActive: _selectedMode == CameraMode.camera),
             ),
             const SizedBox(width: 20),
             GestureDetector(
@@ -334,7 +330,8 @@ class _CameraScreenState extends State<CameraScreen> {
                 setState(() => _selectedMode = CameraMode.live);
                 _showLiveOptions();
               },
-              child: _buildModeText("Live", isActive: _selectedMode == CameraMode.live),
+              child: _buildModeText("Live",
+                  isActive: _selectedMode == CameraMode.live),
             ),
           ],
         ),
@@ -415,7 +412,8 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
 
           // Right: Send Button
-          SendButton(capturedImages: _capturedImages.map((e) => e.path).toList()),
+          SendButton(
+              capturedImages: _capturedImages.map((e) => e.path).toList()),
         ],
       ),
     );

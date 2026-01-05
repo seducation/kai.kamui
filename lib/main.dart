@@ -124,14 +124,27 @@ class MyApp extends StatelessWidget {
 
     return Consumer<ThemeModel>(
       builder: (context, theme, child) {
+        // Build base themes
+        final lightTheme = ThemeData.light();
+        final darkTheme = ThemeData.dark();
+
+        // Apply custom background color if set
+        final effectiveLightTheme = theme.customBackgroundColor != null
+            ? lightTheme.copyWith(
+                scaffoldBackgroundColor: theme.customBackgroundColor,
+              )
+            : lightTheme;
+
+        final effectiveDarkTheme = theme.customBackgroundColor != null
+            ? darkTheme.copyWith(
+                scaffoldBackgroundColor: theme.customBackgroundColor,
+              )
+            : darkTheme;
+
         return MaterialApp.router(
           routerConfig: router,
-          theme: ThemeData.light().copyWith(
-            scaffoldBackgroundColor: theme.customBackgroundColor,
-          ),
-          darkTheme: ThemeData.dark().copyWith(
-            scaffoldBackgroundColor: theme.customBackgroundColor,
-          ),
+          theme: effectiveLightTheme,
+          darkTheme: effectiveDarkTheme,
           themeMode: theme.themeMode,
         );
       },

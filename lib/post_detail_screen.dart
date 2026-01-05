@@ -15,9 +15,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
         title: Text(widget.post.author.name),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -28,7 +26,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (widget.post.mediaUrls != null && widget.post.mediaUrls!.isNotEmpty)
+            if (widget.post.mediaUrls != null &&
+                widget.post.mediaUrls!.isNotEmpty)
               SizedBox(
                 height: 400,
                 child: PageView.builder(
@@ -47,14 +46,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   },
                 ),
               ),
-            if (widget.post.mediaUrls != null && widget.post.mediaUrls!.length > 1)
+            if (widget.post.mediaUrls != null &&
+                widget.post.mediaUrls!.length > 1)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(widget.post.mediaUrls!.length, (index) {
                   return Container(
                     width: 8.0,
                     height: 8.0,
-                    margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 2.0),
+                    margin: const EdgeInsets.symmetric(
+                        vertical: 10.0, horizontal: 2.0),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: _currentPage == index
@@ -73,7 +74,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     children: [
                       CircleAvatar(
                         radius: 20,
-                        backgroundImage: NetworkImage(widget.post.author.profileImageUrl ?? ''),
+                        backgroundImage: NetworkImage(
+                            widget.post.author.profileImageUrl ?? ''),
                       ),
                       const SizedBox(width: 12),
                       Text(
