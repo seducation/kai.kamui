@@ -4,15 +4,21 @@ import 'package:path/path.dart' as p;
 import '../core/agent_base.dart';
 import '../core/step_schema.dart';
 import '../core/step_types.dart';
+import '../permissions/access_gate.dart';
+import '../permissions/permission_types.dart';
 
-/// Agent for persistent storage operations.
-/// Abstracts storage backend (can use Appwrite, local, etc.)
+/// Agent for persistent storage operations with permission enforcement.
+///
+/// All operations are gated by the AccessGate - no implicit access allowed.
 class StorageAgent extends AgentBase {
-  /// In-memory cache for demo
+  /// In-memory cache for performance
   final Map<String, dynamic> _cache = {};
 
   /// Root directory for the vault
   Directory? _vaultDir;
+
+  /// Access gate for permission enforcement
+  final AccessGate _gate = AccessGate();
 
   StorageAgent({
     super.logger,
@@ -29,6 +35,9 @@ class StorageAgent extends AgentBase {
       logStatus(StepType.check, 'created vault at ${_vaultDir!.path}',
           StepStatus.success);
     }
+
+    // Initialize the access gate
+    await _gate.initialize();
   }
 
   File _getFile(String key) {
@@ -37,6 +46,11 @@ class StorageAgent extends AgentBase {
     // Using simple extension inference or default to .md
     final ext = safeKey.contains('.') ? '' : '.md';
     return File(p.join(_vaultDir!.path, '$safeKey$ext'));
+  }
+
+  /// Get the resource path for permission checking
+  String _getResourcePath(String key) {
+    return 'vault/$key';
   }
 
   @override
@@ -52,20 +66,50 @@ class StorageAgent extends AgentBase {
   Future<dynamic> handleRequest(StorageRequest request) async {
     switch (request.operation) {
       case StorageOperation.save:
-        return await save(request.key, request.value);
+        return await save(
+          request.key,
+          request.value,
+          requester: request.requester ?? 'Unknown',
+        );
       case StorageOperation.load:
-        return await load(request.key);
+        return await load(
+          request.key,
+          requester: request.requester ?? 'Unknown',
+        );
       case StorageOperation.delete:
-        return await remove(request.key);
+        return await remove(
+          request.key,
+          requester: request.requester ?? 'Unknown',
+        );
       case StorageOperation.exists:
-        return await exists(request.key);
+        return await exists(
+          request.key,
+          requester: request.requester ?? 'Unknown',
+        );
       case StorageOperation.list:
-        return await listKeys(request.prefix);
+        return await listKeys(
+          request.prefix,
+          requester: request.requester ?? 'Unknown',
+        );
     }
   }
 
-  /// Save a value
-  Future<void> save(String key, dynamic value) async {
+  /// Save a value (requires write permission)
+  Future<void> save(String key, dynamic value,
+      {required String requester}) async {
+    await _initVault();
+    final resourcePath = _getResourcePath(key);
+
+    // PERMISSION CHECK - Must have write access
+    final allowed = await _gate.canWrite(requester, resourcePath);
+    if (!allowed) {
+      throw PermissionDeniedException(
+        requester: requester,
+        resource: resourcePath,
+        action: PermissionType.write,
+      );
+    }
+
     // Step 1: Validate key
     await execute<void>(
       action: StepType.check,
@@ -97,12 +141,26 @@ class StorageAgent extends AgentBase {
       metadata: {
         'path': _getFile(key).path,
         'type': value.runtimeType.toString(),
+        'requester': requester,
       },
     );
   }
 
-  /// Load a value
-  Future<dynamic> load(String key) async {
+  /// Load a value (requires read permission)
+  Future<dynamic> load(String key, {required String requester}) async {
+    await _initVault();
+    final resourcePath = _getResourcePath(key);
+
+    // PERMISSION CHECK - Must have read access
+    final allowed = await _gate.canRead(requester, resourcePath);
+    if (!allowed) {
+      throw PermissionDeniedException(
+        requester: requester,
+        resource: resourcePath,
+        action: PermissionType.read,
+      );
+    }
+
     // Step 1: Check cache
     if (_cache.containsKey(key)) {
       logStatus(StepType.fetch, 'loaded from cache: $key', StepStatus.success);
@@ -121,11 +179,31 @@ class StorageAgent extends AgentBase {
         _cache[key] = content; // Cache it
         return content;
       },
+      metadata: {'requester': requester},
     );
   }
 
-  /// Remove a value
-  Future<void> remove(String key) async {
+  /// Remove a value (requires delete permission)
+  Future<void> remove(String key, {required String requester}) async {
+    await _initVault();
+    final resourcePath = _getResourcePath(key);
+
+    // PERMISSION CHECK - Must have delete access
+    final result = await _gate.requestAccess(
+      requester: requester,
+      requesterType: GranteeType.agent,
+      resourcePath: resourcePath,
+      action: PermissionType.delete,
+    );
+
+    if (result != AccessResult.allowed) {
+      throw PermissionDeniedException(
+        requester: requester,
+        resource: resourcePath,
+        action: PermissionType.delete,
+      );
+    }
+
     await execute<void>(
       action: StepType.modify,
       target: 'removing: $key',
@@ -136,11 +214,25 @@ class StorageAgent extends AgentBase {
         }
         _cache.remove(key);
       },
+      metadata: {'requester': requester},
     );
   }
 
-  /// Check if key exists
-  Future<bool> exists(String key) async {
+  /// Check if key exists (requires read permission)
+  Future<bool> exists(String key, {required String requester}) async {
+    await _initVault();
+    final resourcePath = _getResourcePath(key);
+
+    // PERMISSION CHECK - Need at least read access to check existence
+    final allowed = await _gate.canRead(requester, resourcePath);
+    if (!allowed) {
+      throw PermissionDeniedException(
+        requester: requester,
+        resource: resourcePath,
+        action: PermissionType.read,
+      );
+    }
+
     // Check cache first
     if (_cache.containsKey(key)) return true;
 
@@ -149,11 +241,25 @@ class StorageAgent extends AgentBase {
       action: StepType.check,
       target: 'exists: $key',
       task: () async => _getFile(key).exists(),
+      metadata: {'requester': requester},
     );
   }
 
-  /// List keys with prefix
-  Future<List<String>> listKeys(String? prefix) async {
+  /// List keys with prefix (requires read permission on vault root)
+  Future<List<String>> listKeys(String? prefix,
+      {required String requester}) async {
+    await _initVault();
+
+    // PERMISSION CHECK - Need read access to vault root for listing
+    final allowed = await _gate.canRead(requester, 'vault');
+    if (!allowed) {
+      throw PermissionDeniedException(
+        requester: requester,
+        resource: 'vault',
+        action: PermissionType.read,
+      );
+    }
+
     return await execute<List<String>>(
       action: StepType.fetch,
       target: 'listing keys${prefix != null ? " with prefix: $prefix" : ""}',
@@ -167,11 +273,30 @@ class StorageAgent extends AgentBase {
         }
         return keys;
       },
+      metadata: {'requester': requester},
     );
   }
 
-  /// Clear all cached data
-  Future<void> clearAll() async {
+  /// Clear all cached data (requires delete permission on vault root)
+  Future<void> clearAll({required String requester}) async {
+    await _initVault();
+
+    // PERMISSION CHECK - Need delete access to vault root
+    final result = await _gate.requestAccess(
+      requester: requester,
+      requesterType: GranteeType.agent,
+      resourcePath: 'vault',
+      action: PermissionType.delete,
+    );
+
+    if (result != AccessResult.allowed) {
+      throw PermissionDeniedException(
+        requester: requester,
+        resource: 'vault',
+        action: PermissionType.delete,
+      );
+    }
+
     await execute(
         action: StepType.modify,
         target: 'clearing vault',
@@ -181,8 +306,12 @@ class StorageAgent extends AgentBase {
             _vaultDir!.createSync();
           }
           _cache.clear();
-        });
+        },
+        metadata: {'requester': requester});
   }
+
+  /// Get the access gate for external use
+  AccessGate get accessGate => _gate;
 }
 
 /// Storage operations
@@ -200,23 +329,32 @@ class StorageRequest {
   final String key;
   final dynamic value;
   final String? prefix;
+  final String? requester; // NEW: Who is making this request
 
   const StorageRequest({
     required this.operation,
     required this.key,
     this.value,
     this.prefix,
+    this.requester,
   });
 
   /// Create a save request
-  factory StorageRequest.save(String key, dynamic value) =>
-      StorageRequest(operation: StorageOperation.save, key: key, value: value);
+  factory StorageRequest.save(String key, dynamic value,
+          {required String requester}) =>
+      StorageRequest(
+          operation: StorageOperation.save,
+          key: key,
+          value: value,
+          requester: requester);
 
   /// Create a load request
-  factory StorageRequest.load(String key) =>
-      StorageRequest(operation: StorageOperation.load, key: key);
+  factory StorageRequest.load(String key, {required String requester}) =>
+      StorageRequest(
+          operation: StorageOperation.load, key: key, requester: requester);
 
   /// Create a delete request
-  factory StorageRequest.delete(String key) =>
-      StorageRequest(operation: StorageOperation.delete, key: key);
+  factory StorageRequest.delete(String key, {required String requester}) =>
+      StorageRequest(
+          operation: StorageOperation.delete, key: key, requester: requester);
 }

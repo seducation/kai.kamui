@@ -21,12 +21,27 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
 
 ### 4. Robust & Resilient Core 🛡️
 - **Auto-Healing**: The `ControllerAgent` includes retry logic for failed steps.
-- **State Persistence**: Survival through restarts; the controller saves its runtime state (retry counts, queue status) to the vault.
+- **Execution Management**: Advanced modes: `Normal`, `Dry Run` (simulated), `Replay` (re-run history), and `Undo/Redo`.
+- **Failure Vault**: Git-like persistence for failed executions, allowing "Redo" with original inputs.
+- **State Persistence**: Survival through restarts; the controller saves its runtime state to the vault.
 
-### 5. Adaptive UI 📱💻
+### 5. Intelligent Brain & Planning 🧠
+- **PlannerAgent**: Dynamic task routing using **Deterministic** (rule-based) and **Exploratory** (learning) modes.
+- **Reliability Tracker**: Monitors agent performance and success rates to optimize task allocation.
+- **Capability System**: Fine-grained proficiency scoring for agents (Code, Web, Search, etc.).
+
+### 6. Storage Permissions & Lineage 🧬
+- **Hierarchy System**: Organized storage zones (`temporary`, `permanent/vault`, `cache`, `agent-owned`).
+- **Access Gate**: Secure, auditable permission system with hash-chained audit logs.
+- **Dataset Lineage**: Full audit trail of which datasets trained which models, including version comparison views.
+
+### 7. Adaptive UI 📱💻
 - **Responsive Layout**:
   - **Desktop/Tablet**: Full interactive Graph Editor.
-  - **Mobile**: Automatically switches to an **Execution Timeline (Feed View)** for easy monitoring on small screens.
+  - **Mobile**: Automatically switches to an **Execution Timeline (Feed View)**.
+- **Specialized Dashboards**:
+  - **Failure Vault UI**: Manage failures and history.
+  - **Audit & Lineage UI**: Inspect training history and dataset provenance.
 
 ## 🛠️ Tech Stack & Architecture
 
@@ -41,14 +56,14 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
 ## 🚀 Getting Started
 
 1. **Setup API Keys**: Add your OpenAI/Gemini keys in the Settings screen.
-2. **Design your Flow**: Open the **Visual Orchestrator** and connect your agents.
-3. **Run**: Click Play and watch the system execute.
-4. **Inspect Vault**: Check the `documents/vault/` directory on your device to see the persistent knowledge generated.
+2. **Configure Zones**: Set up storage zones in the **Storage Settings**.
+3. **Design your Flow**: Open the **Visual Orchestrator** and connect your agents.
+4. **Monitor**: Use the **Execution Panel** and **Failure Vault** to track and debug.
 
 ## 📝 Planned Improvements
-- [ ] LLM-powered Graph Hallucination (generating entire workflows from a single prompt).
+- [ ] LLM-powered Graph Hallucination.
 - [ ] Approval Nodes (Human-in-the-loop validation).
-- [ ] Advanced Type Casting between incompatible ports.
+- [ ] Autonomous Background Task Optimization.
 
 ---
 *Built for the future of agentic coding and knowledge management.*

@@ -7,3 +7,4 @@ export 'file_system_agent.dart';
 export 'storage_agent.dart';
 export 'system_agent.dart';
 export 'appwrite_agent.dart';
+export 'diff_agent.dart';

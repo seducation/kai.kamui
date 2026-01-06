@@ -9,6 +9,10 @@ import '../specialized/storage_agent.dart';
 import 'agent_registry.dart';
 import 'message_bus.dart';
 import 'task_queue.dart';
+import 'planner_agent.dart';
+import 'reliability_tracker.dart';
+import 'execution_manager.dart';
+import 'agent_capability.dart' show RoutableTask;
 
 /// Function type for AI planning
 typedef PlanningFunction = Future<ActionPlan> Function(
@@ -38,6 +42,11 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   final Map<int, int> _retryCounts = {};
   static const int _maxRetries = 3;
 
+  // Intelligent Components
+  late final PlannerAgent planner;
+  final ReliabilityTracker reliability = ReliabilityTracker();
+  final ExecutionManager executionManager = ExecutionManager();
+
   ControllerAgent({
     required this.registry,
     MessageBus? bus,
@@ -47,8 +56,24 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   })  : bus = bus ?? messageBus,
         queue = queue ?? taskQueue,
         super(name: 'Controller', logger: logger) {
+    // Initialize Planner
+    planner = PlannerAgent(registry: registry, logger: logger);
+
     // Listen for step completions to trigger routing
     this.logger.stepStream.listen(_handleStepEvent);
+
+    // Initialize subsystems
+    _initializeSubsystems();
+  }
+
+  Future<void> _initializeSubsystems() async {
+    await reliability.initialize();
+    await executionManager.initialize();
+
+    // Register capabilities if not already done
+    // In a real app, this would happen dynamically as agents register
+    // For now, we manually trigger the setup helper (imported via coordination.dart)
+    // We'll implemented this logic inside _createPlan to ensure it's ready
   }
 
   void _handleStepEvent(AgentStep step) {
@@ -128,10 +153,14 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   Future<void> saveRuntimeState() async {
     final storage = registry.getAgent('Storage');
     if (storage != null && storage is StorageAgent) {
-      await storage.save('controller_state.json', {
-        'retryCounts': _retryCounts.map((k, v) => MapEntry(k.toString(), v)),
-        'timestamp': DateTime.now().toIso8601String(),
-      });
+      await storage.save(
+          'controller_state.json',
+          {
+            'retryCounts':
+                _retryCounts.map((k, v) => MapEntry(k.toString(), v)),
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+          requester: 'Controller');
     }
   }
 
@@ -139,7 +168,8 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   Future<void> restoreRuntimeState() async {
     final storage = registry.getAgent('Storage');
     if (storage != null && storage is StorageAgent) {
-      final state = await storage.load('controller_state.json');
+      final state =
+          await storage.load('controller_state.json', requester: 'Controller');
       if (state != null && state is Map<String, dynamic>) {
         if (state['retryCounts'] != null) {
           _retryCounts.clear();
@@ -292,78 +322,53 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     }
 
     // Default: simple single-agent plan based on request keywords
-    return _createDefaultPlan(userRequest, availableAgents);
+    return await _createSmartPlan(userRequest, availableAgents);
   }
 
   /// Create a default plan based on keywords
-  ActionPlan _createDefaultPlan(String request, List<String> agents) {
-    final tasks = <PlannedTask>[];
-    final lowerRequest = request.toLowerCase();
+  Future<ActionPlan> _createSmartPlan(
+      String request, List<String> agents) async {
+    // 1. Create a routable task
+    final task = RoutableTask(description: request);
 
-    // Simple keyword matching for demo
-    if (lowerRequest.contains('fetch') ||
-        lowerRequest.contains('download') ||
-        lowerRequest.contains('url')) {
-      if (agents.contains('WebCrawler')) {
-        tasks.add(PlannedTask(
-          agentName: 'WebCrawler',
-          action: StepType.fetch,
-          target: request,
-        ));
-      }
-    }
+    // 2. Ask the Planner to route it
+    // The Planner uses reliability stats and capabilities to decide
+    final routing = await planner.routeTask(task);
 
-    if (lowerRequest.contains('write') ||
-        lowerRequest.contains('code') ||
-        lowerRequest.contains('create')) {
-      if (agents.contains('CodeWriter')) {
-        tasks.add(PlannedTask(
-          agentName: 'CodeWriter',
-          action: StepType.modify,
-          target: request,
-          dependsOn: tasks.isNotEmpty ? [0] : [],
-        ));
-      }
-    }
-
-    if (lowerRequest.contains('debug') ||
-        lowerRequest.contains('fix') ||
-        lowerRequest.contains('error')) {
-      if (agents.contains('CodeDebugger')) {
-        tasks.add(PlannedTask(
-          agentName: 'CodeDebugger',
-          action: StepType.analyze,
-          target: request,
-        ));
-      }
-    }
-
-    if (lowerRequest.contains('save') || lowerRequest.contains('store')) {
-      if (agents.contains('Storage')) {
-        tasks.add(PlannedTask(
-          agentName: 'Storage',
-          action: StepType.store,
-          target: request,
-          dependsOn: List.generate(tasks.length, (i) => i),
-        ));
-      }
-    }
-
-    // If no specific tasks matched, use first available agent
-    if (tasks.isEmpty && agents.isNotEmpty) {
-      tasks.add(PlannedTask(
-        agentName: agents.first,
-        action: StepType.analyze,
-        target: request,
-      ));
+    if (routing == null) {
+      // Fallback: use first agent
+      return ActionPlan(
+        planId: 'plan_fallback_${DateTime.now().millisecondsSinceEpoch}',
+        userRequest: request,
+        tasks: [
+          PlannedTask(
+            agentName: agents.isNotEmpty ? agents.first : 'System',
+            action: StepType.analyze,
+            target: request,
+          )
+        ],
+        createdAt: DateTime.now(),
+      );
     }
 
     return ActionPlan(
       planId: 'plan_${DateTime.now().millisecondsSinceEpoch}',
       userRequest: request,
-      tasks: tasks,
+      tasks: [
+        PlannedTask(
+          agentName: routing.assignedAgent,
+          action: _mapCategoryToAction(routing.matchedCapability.category),
+          target: request,
+        )
+      ],
       createdAt: DateTime.now(),
     );
+  }
+
+  // TODO: Add proper mapping enum
+  StepType _mapCategoryToAction(dynamic category) {
+    // Simple mapping for now
+    return StepType.analyze;
   }
 
   /// Execute an action plan

@@ -22,6 +22,12 @@ export 'specialized/specialized.dart';
 // AI providers
 export 'ai/ai.dart';
 
+// Permissions
+export 'permissions/permissions.dart';
+
+// Storage Taxonomy
+export 'storage/storage.dart';
+
 // Services
 export 'services/narrator_service.dart';
 export 'services/api_key_manager.dart';
