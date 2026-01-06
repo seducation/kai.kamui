@@ -18,6 +18,11 @@ class VolitionOrgan extends Organ {
   double _curiosity = 0.5;
   double _maintenance = 0.5;
 
+  List<Drive> get drives => [
+        Drive('Curiosity', _curiosity),
+        Drive('Maintenance', _maintenance),
+      ];
+
   VolitionOrgan({
     required this.bus,
   }) : super(
@@ -90,4 +95,10 @@ class VolitionOrgan extends Organ {
     // Can also be prompted to "think"
     return 'Volition is active. Curiosity: $_curiosity' as R;
   }
+}
+
+class Drive {
+  final String name;
+  final double intensity;
+  Drive(this.name, this.intensity);
 }

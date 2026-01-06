@@ -25,7 +25,7 @@ class ReflexAuditAgent extends AgentBase {
       action: StepType.decide,
       target: 'Safety Audit for $agentName',
       task: () async {
-        logStatus(StepType.examine, 'Auditing ${errors.length} recent failures',
+        logStatus(StepType.analyze, 'Auditing ${errors.length} recent failures',
             StepStatus.running);
 
         // Simple Heuristic AI (mocking a prompt-based decision for speed)

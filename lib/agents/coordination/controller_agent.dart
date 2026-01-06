@@ -20,6 +20,7 @@ import 'reflex_system.dart';
 import 'motor_system.dart';
 import 'agent_profile_setup.dart';
 import '../specialized/reflex_audit_agent.dart';
+import '../specialized/systems/limbic_system.dart';
 
 /// Function type for AI planning
 typedef PlanningFunction = Future<ActionPlan> Function(
@@ -58,6 +59,9 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   final ImmuneSystem immuneSystem = ImmuneSystem();
   final ReflexSystem reflexSystem = ReflexSystem();
   final MotorSystem motorSystem = MotorSystem();
+
+  // Organs (for UI monitoring)
+  final Map<String, Organ> organs = {};
 
   ControllerAgent({
     required this.registry,
@@ -117,16 +121,19 @@ class ControllerAgent extends AgentBase with AgentDelegation {
       logicOrgan =
           LogicOrgan(writer: writer, debugger: debugger, differ: differ);
       registry.register(logicOrgan);
+      organs['Logic'] = logicOrgan;
     }
 
     if (storage != null) {
       memoryOrgan = MemoryOrgan(storage: storage, reliability: reliability);
       registry.register(memoryOrgan);
+      organs['Memory'] = memoryOrgan;
     }
 
     if (crawler != null) {
       discoveryOrgan = DiscoveryOrgan(crawler: crawler);
       registry.register(discoveryOrgan);
+      organs['Discovery'] = discoveryOrgan;
     }
 
     // Initialize Organ Systems
@@ -144,11 +151,24 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     final volition = VolitionOrgan(bus: bus);
     registry.register(volition);
     volition.start(); // Give it life!
+    organs['Volition'] = volition;
 
     // 2. Speech & Social
     // (SocialAgent instantiates its own SpeechOrgan for now, or we could decouple)
     final social = SocialAgent(logger: logger);
     registry.register(social);
+    organs['Speech'] = social.speech;
+
+    // Phase 13: Limbic System
+    final limbic = LimbicSystem();
+    limbic.start();
+    registry.register(limbic);
+    // We don't add it to 'organs' map because it's a System, but maybe we should for monitoring?
+    // Let's create a separate list or just add it to organs for now since OrganSystem extends Organ(technically agent, but structurally similar goals)
+    // Actually OrganSystem doesn't extend Organ currently, it extends AgentBase.
+
+    // Pass Limbic System to SpeechOrgan (We need to update SocialAgent/SpeechOrgan to accept it)
+    social.attachLimbicSystem(limbic);
   }
 
   void _handleStepEvent(AgentStep step) {

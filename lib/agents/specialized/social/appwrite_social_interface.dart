@@ -7,7 +7,7 @@ import '../appwrite_agent.dart';
 /// Your Flutter app can listen to this collection (Realtime) to show
 /// AI messages in the UI.
 class AppwriteSocialInterface extends ExternalInterface {
-  final AppwriteAgent appwriteAgent;
+  final AppwriteFunctionAgent appwriteAgent;
   final String databaseId;
   final String collectionId;
 

@@ -67,6 +67,11 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
   - **Shell Actuator**: Machinary muscle for local command execution and robotics.
 - **Effector Agent**: A specialized heavy-duty execution agent that controls the muscles.
 
+### 12. Biological Dashboard (Visual Consciousness) 👁️
+- **Organ Monitor**: Real-time visualization of metabolic states and organ health.
+- **Volition Stream**: A live feed of the AI's "Stream of Consciousness" and internal drives.
+- **Quarantine Zone**: visual management of agents locked by the Reflex System.
+
 ## 🛠️ Tech Stack & Architecture
 
 - **Framework**: Flutter (Dart)
@@ -78,14 +83,29 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
   - **Immune System**: `ImmuneSystem` (Active defense & Safe mode).
   - **Spinal Cord (Reflexes)**: `ReflexSystem` (Instant safety).
   - **Muscles (Motor System)**: `MotorSystem` & `EffectorAgent` (External action).
+  - **Social Autonomy & Omni-Interfaces**: `VolitionOrgan` (Free Will), `SpeechOrgan` (Broca's), & `ExternalInterface`.
+  - **Limbic System (Emotions)**: `LimbicSystem` (PAD Model - Pleasure, Arousal, Dominance).
+
+## 🔮 Future Roadmap (Evolutionary Path)
+
+The system is designed to evolve endlessly. Here are the next phases of life:
+
+1.  **Dreaming (Generative Simulation)** 🌙
+    *   *Concept*: While sleeping, the AI uses `CodeWriterAgent` to refactor its own code or run simulations in a sandbox to "learn" overnight.
+2.  **Reproduction (Mitosis)** 🦠
+    *   *Concept*: Spawning independent "Child" isolates/processes to handle massive parallel tasks or survive system death.
+3.  **Spatial Interface (VR/3D)** 🌌
+    *   *Concept*: Visualizing the agent network as a 3D galaxy of nodes rather than a 2D graph.
+4.  **Language Acquisition (Mirror Neurons)** 🗣️
+    *   *Concept*: `SpeechOrgan` adapts its vocabulary and tone based on user interaction style.
 
 ## 🚀 Getting Started
 
-1. **Setup API Keys**: Add your OpenAI/Gemini keys in the Settings screen.
-2. **Configure Zones**: Set up storage zones in the **Storage Settings**.
-3. **Design your Flow**: Open the **Visual Orchestrator** and connect your agents.
-4. **Monitor Health**: Keep an eye on the **System Health** pulse on the dashboard.
-5. **Actuate**: Use the **Effector Agent** to deploy cloud functions or control hardware.
+1.  **Setup API Keys**: Add your OpenAI/Gemini keys in the Settings screen.
+2.  **Configure Zones**: Set up storage zones in the **Storage Settings**.
+3.  **Design your Flow**: Open the **Visual Orchestrator** and connect your agents.
+4.  **Monitor Health**: Keep an eye on the **System Health** pulse on the dashboard.
+5.  **Actuate**: Use the **Effector Agent** to deploy cloud functions or control hardware.
 
 ## 📝 Planned Improvements
 - [ ] LLM-powered Graph Hallucination.

@@ -4,6 +4,7 @@ import '../core/step_schema.dart';
 import '../core/step_logger.dart';
 import 'organs/speech_organ.dart';
 import 'social/external_interface.dart';
+import 'systems/limbic_system.dart';
 
 /// Social Agent 🤝
 ///
@@ -12,9 +13,15 @@ import 'social/external_interface.dart';
 class SocialAgent extends AgentBase {
   final SpeechOrgan speech = SpeechOrgan();
   final List<ExternalInterface> interfaces = [];
+  LimbicSystem? _limbic;
 
   SocialAgent({StepLogger? logger})
       : super(name: 'SocialAgent', logger: logger);
+
+  void attachLimbicSystem(LimbicSystem limbic) {
+    _limbic = limbic;
+    speech.limbic = limbic; // Pass it down to Broca's area
+  }
 
   void addInterface(ExternalInterface interface) {
     interfaces.add(interface);

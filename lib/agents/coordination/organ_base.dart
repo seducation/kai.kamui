@@ -23,6 +23,9 @@ abstract class Organ extends AgentBase {
   /// Current metabolic health (0.0 to 1.0)
   double get health => _metabolism;
 
+  /// System is fatigued if metabolism is low
+  bool get isFatigued => _metabolism < 0.3;
+
   /// Total tokens consumed by this organ
   int get tokenUsage => _tokenUsage;
 

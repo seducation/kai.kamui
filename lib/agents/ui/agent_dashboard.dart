@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import '../coordination/agent_registry.dart';
+import '../coordination/controller_agent.dart';
 import '../core/agent_base.dart';
 import '../core/step_logger.dart';
 import '../core/step_schema.dart';
+import '../services/api_key_manager.dart';
+import '../specialized/organs/volition_organ.dart';
+import 'biological/organ_monitor_widget.dart';
+import 'biological/volition_stream_widget.dart';
 import 'step_stream_widget.dart';
 import 'visual_orchestration_screen.dart';
 import 'api_key_settings_screen.dart';
-import '../services/api_key_manager.dart';
 import 'system_status_row.dart';
 
 /// Dashboard showing all agents and their status.
@@ -68,6 +72,37 @@ class _AgentDashboardState extends State<AgentDashboard> {
               const SizedBox(height: 12),
               // System Health & Sleep Status
               const SystemStatusRow(),
+
+              const SizedBox(height: 8),
+
+              // Biological Monitoring (Phase 12 Integration)
+              // We find the ControllerAgent to access biological state
+              Builder(builder: (context) {
+                final controller = agents.firstWhere(
+                    (a) => a is ControllerAgent,
+                    orElse: () => agents.first);
+
+                if (controller is ControllerAgent &&
+                    controller.organs.isNotEmpty) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: OrganMonitorWidget(organs: controller.organs),
+                      ),
+                      if (controller.organs.containsKey('Volition'))
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: VolitionStreamWidget(
+                              volition: controller.organs['Volition']
+                                  as VolitionOrgan),
+                        ),
+                    ],
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
             ],
           ),
         ),
