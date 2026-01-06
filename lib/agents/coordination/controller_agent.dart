@@ -101,17 +101,36 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     final debugger = registry.getAgentOfType<CodeDebuggerAgent>();
     final differ = registry.getAgentOfType<DiffAgent>();
     final storage = registry.getAgentOfType<StorageAgent>();
+    final crawler = registry.getAgentOfType<WebCrawlerAgent>();
+
+    LogicOrgan? logicOrgan;
+    MemoryOrgan? memoryOrgan;
+    DiscoveryOrgan? discoveryOrgan;
 
     if (writer != null && debugger != null && differ != null) {
-      final logicOrgan =
+      logicOrgan =
           LogicOrgan(writer: writer, debugger: debugger, differ: differ);
       registry.register(logicOrgan);
     }
 
     if (storage != null) {
-      final memoryOrgan =
-          MemoryOrgan(storage: storage, reliability: reliability);
+      memoryOrgan = MemoryOrgan(storage: storage, reliability: reliability);
       registry.register(memoryOrgan);
+    }
+
+    if (crawler != null) {
+      discoveryOrgan = DiscoveryOrgan(crawler: crawler);
+      registry.register(discoveryOrgan);
+    }
+
+    // Initialize Organ Systems
+    if (discoveryOrgan != null && logicOrgan != null && memoryOrgan != null) {
+      final digestiveSystem = DigestiveSystem(
+        discovery: discoveryOrgan,
+        logic: logicOrgan,
+        memory: memoryOrgan,
+      );
+      registry.register(digestiveSystem);
     }
   }
 

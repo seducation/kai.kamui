@@ -135,6 +135,46 @@ class AgentProfileSetup {
         maxConcurrentTasks: 5,
       ));
     }
+
+    // Discovery Organ
+    if (registry.getAgent('DiscoveryOrgan') != null) {
+      planner.registerProfile(AgentProfile(
+        agentName: 'DiscoveryOrgan',
+        capabilities: [
+          const AgentCapability(
+            id: 'cap_discovery',
+            name: 'Data Discovery',
+            category: CapabilityCategory.web,
+            proficiency: 0.9,
+            keywords: ['discovery', 'organ', 'ingest', 'search', 'crawl'],
+          ),
+        ],
+        maxConcurrentTasks: 3,
+      ));
+    }
+
+    // Digestive System
+    if (registry.getAgent('DigestiveSystem') != null) {
+      planner.registerProfile(AgentProfile(
+        agentName: 'DigestiveSystem',
+        capabilities: [
+          const AgentCapability(
+            id: 'cap_end_to_end_digestion',
+            name: 'Knowledge Digestion',
+            category: CapabilityCategory.custom,
+            proficiency: 1.0,
+            keywords: [
+              'digestive',
+              'system',
+              'end-to-end',
+              'ingestion to storage',
+              'homeostasis'
+            ],
+          ),
+        ],
+        maxConcurrentTasks: 1,
+      ));
+    }
   }
 
   /// Create a custom agent profile

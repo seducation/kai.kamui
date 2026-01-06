@@ -11,3 +11,5 @@ export 'diff_agent.dart';
 export 'effector_agent.dart';
 export 'organs/logic_organ.dart';
 export 'organs/memory_organ.dart';
+export 'organs/discovery_organ.dart';
+export 'systems/digestive_system.dart';
