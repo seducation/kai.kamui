@@ -9,3 +9,5 @@ export 'system_agent.dart';
 export 'appwrite_agent.dart';
 export 'diff_agent.dart';
 export 'effector_agent.dart';
+export 'organs/logic_organ.dart';
+export 'organs/memory_organ.dart';

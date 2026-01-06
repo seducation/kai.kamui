@@ -95,6 +95,46 @@ class AgentProfileSetup {
         maxConcurrentTasks: 2,
       ));
     }
+
+    // Logic Organ
+    if (registry.getAgent('LogicOrgan') != null) {
+      planner.registerProfile(AgentProfile(
+        agentName: 'LogicOrgan',
+        capabilities: [
+          const AgentCapability(
+            id: 'cap_logic_cycle',
+            name: 'Self-Healing Logic',
+            category: CapabilityCategory.code,
+            proficiency: 0.95,
+            keywords: [
+              'logic',
+              'organ',
+              'self-healing',
+              'write and debug',
+              'cycle'
+            ],
+          ),
+        ],
+        maxConcurrentTasks: 1,
+      ));
+    }
+
+    // Memory Organ
+    if (registry.getAgent('MemoryOrgan') != null) {
+      planner.registerProfile(AgentProfile(
+        agentName: 'MemoryOrgan',
+        capabilities: [
+          const AgentCapability(
+            id: 'cap_deep_memory',
+            name: 'Deep Persistence',
+            category: CapabilityCategory.storage,
+            proficiency: 0.95,
+            keywords: ['memory', 'organ', 'vault', 'long-term', 'persist'],
+          ),
+        ],
+        maxConcurrentTasks: 5,
+      ));
+    }
   }
 
   /// Create a custom agent profile

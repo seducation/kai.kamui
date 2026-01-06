@@ -13,3 +13,4 @@ export 'agent_profile_setup.dart';
 export 'reliability_tracker.dart';
 export 'motor_system.dart';
 export 'actuators.dart';
+export 'organ_base.dart';

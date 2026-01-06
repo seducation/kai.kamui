@@ -5,8 +5,8 @@ import '../core/step_schema.dart';
 import '../core/step_types.dart';
 import '../core/step_logger.dart';
 import '../orchestration/graph_model.dart';
-import '../specialized/storage_agent.dart';
-import 'agent_registry.dart';
+import '../specialized/specialized.dart';
+import 'coordination.dart';
 import 'message_bus.dart';
 import 'task_queue.dart';
 import 'planner_agent.dart';
@@ -89,8 +89,30 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     immuneSystem.start();
     reflexSystem.start();
 
+    // Instantiate Organs (using other agents as tissues)
+    _initializeOrgans();
+
     // Register capabilities
     AgentProfileSetup.registerDefaults(planner, registry);
+  }
+
+  void _initializeOrgans() {
+    final writer = registry.getAgentOfType<CodeWriterAgent>();
+    final debugger = registry.getAgentOfType<CodeDebuggerAgent>();
+    final differ = registry.getAgentOfType<DiffAgent>();
+    final storage = registry.getAgentOfType<StorageAgent>();
+
+    if (writer != null && debugger != null && differ != null) {
+      final logicOrgan =
+          LogicOrgan(writer: writer, debugger: debugger, differ: differ);
+      registry.register(logicOrgan);
+    }
+
+    if (storage != null) {
+      final memoryOrgan =
+          MemoryOrgan(storage: storage, reliability: reliability);
+      registry.register(memoryOrgan);
+    }
   }
 
   void _handleStepEvent(AgentStep step) {

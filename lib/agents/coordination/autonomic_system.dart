@@ -3,6 +3,8 @@ import 'package:path_provider/path_provider.dart';
 
 import 'reliability_tracker.dart';
 import '../storage/taxonomy_registry.dart';
+import 'agent_registry.dart';
+import 'organ_base.dart';
 
 /// Autonomic Nervous System - Keeps the system alive and healthy.
 ///
@@ -69,6 +71,9 @@ class AutonomicSystem {
       issues.add(criticalStorage);
     }
 
+    // 4. Record Metabolic Rest for Organs
+    _restOrgans();
+
     // Determine Health
     SystemHealth newHealth;
     if (issues.isEmpty) {
@@ -99,6 +104,13 @@ class AutonomicSystem {
       return null;
     } catch (e) {
       return 'Storage check failed: $e';
+    }
+  }
+
+  void _restOrgans() {
+    final organs = agentRegistry.allAgents.whereType<Organ>();
+    for (final organ in organs) {
+      organ.rest();
     }
   }
 }
