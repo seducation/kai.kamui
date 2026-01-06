@@ -11,3 +11,5 @@ export 'agent_capability.dart'
 export 'planner_agent.dart';
 export 'agent_profile_setup.dart';
 export 'reliability_tracker.dart';
+export 'motor_system.dart';
+export 'actuators.dart';

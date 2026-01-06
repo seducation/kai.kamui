@@ -71,6 +71,30 @@ class AgentProfileSetup {
         maxConcurrentTasks: 5,
       ));
     }
+
+    // EffectorAgent
+    if (registry.getAgent('Effector') != null) {
+      planner.registerProfile(AgentProfile(
+        agentName: 'Effector',
+        capabilities: [
+          const AgentCapability(
+            id: 'cap_actuation',
+            name: 'Actuation',
+            category: CapabilityCategory.custom,
+            proficiency: 0.9,
+            keywords: [
+              'actuate',
+              'move',
+              'execute',
+              'cloud',
+              'appwrite',
+              'shell'
+            ],
+          ),
+        ],
+        maxConcurrentTasks: 2,
+      ));
+    }
   }
 
   /// Create a custom agent profile

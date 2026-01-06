@@ -17,6 +17,8 @@ import 'autonomic_system.dart';
 import 'sleep_manager.dart';
 import 'immune_system.dart';
 import 'reflex_system.dart';
+import 'motor_system.dart';
+import 'agent_profile_setup.dart';
 
 /// Function type for AI planning
 typedef PlanningFunction = Future<ActionPlan> Function(
@@ -54,6 +56,7 @@ class ControllerAgent extends AgentBase with AgentDelegation {
   final SleepManager sleepManager = SleepManager();
   final ImmuneSystem immuneSystem = ImmuneSystem();
   final ReflexSystem reflexSystem = ReflexSystem();
+  final MotorSystem motorSystem = MotorSystem();
 
   ControllerAgent({
     required this.registry,
@@ -86,10 +89,8 @@ class ControllerAgent extends AgentBase with AgentDelegation {
     immuneSystem.start();
     reflexSystem.start();
 
-    // Register capabilities if not already done
-    // In a real app, this would happen dynamically as agents register
-    // For now, we manually trigger the setup helper (imported via coordination.dart)
-    // We'll implemented this logic inside _createPlan to ensure it's ready
+    // Register capabilities
+    AgentProfileSetup.registerDefaults(planner, registry);
   }
 
   void _handleStepEvent(AgentStep step) {

@@ -8,3 +8,4 @@ export 'storage_agent.dart';
 export 'system_agent.dart';
 export 'appwrite_agent.dart';
 export 'diff_agent.dart';
+export 'effector_agent.dart';
