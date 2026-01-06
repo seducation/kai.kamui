@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/calls/answering_screen.dart';
 import 'package:my_app/calls/incoming_call_screen.dart';
+import 'package:my_app/calls/call_service.dart';
 import 'package:my_app/calls/outgoing_call_screen.dart';
+import 'package:my_app/calls/services/signaling_service.dart';
 import 'package:my_app/chat_screen.dart';
 import 'package:my_app/environment.dart';
 import 'package:my_app/profile_page.dart';
@@ -91,6 +93,16 @@ Future<void> main() async {
   final authService = AuthService(client);
   await authService.init();
 
+  final signalingService = SignalingService(appwriteService);
+  final callService = CallService(appwriteService, signalingService);
+
+  // Initialize call service to listen for incoming calls if logged in
+  try {
+    await callService.initialize();
+  } catch (e) {
+    debugPrint('CallService init warning: $e');
+  }
+
   // Handle FCM token
   try {
     String? token = await FirebaseMessaging.instance.getToken();
@@ -105,6 +117,8 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         Provider.value(value: appwriteService),
+        Provider.value(value: signalingService),
+        Provider.value(value: callService),
         ChangeNotifierProvider.value(value: authService),
         ChangeNotifierProvider(create: (_) => ThemeModel()),
         ChangeNotifierProvider(create: (_) => QueueProvider()),

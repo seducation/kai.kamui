@@ -36,7 +36,12 @@ class SettingSupportScreen extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const AIChatScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const AIChatScreen(
+                    searchResults: [],
+                    query: 'Support Chat',
+                  ),
+                ),
               );
             },
           ),

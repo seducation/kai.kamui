@@ -19,9 +19,13 @@ class HmvFilesTabscreen extends StatefulWidget {
   State<HmvFilesTabscreen> createState() => _HmvFilesTabscreenState();
 }
 
-class _HmvFilesTabscreenState extends State<HmvFilesTabscreen> {
+class _HmvFilesTabscreenState extends State<HmvFilesTabscreen>
+    with AutomaticKeepAliveClientMixin {
   late FeedController _controller;
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -80,6 +84,7 @@ class _HmvFilesTabscreenState extends State<HmvFilesTabscreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return ChangeNotifierProvider.value(
       value: _controller,
       child: Scaffold(

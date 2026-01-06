@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:my_app/calls/models/call_models.dart';
+import 'package:my_app/calls/utils/permission_handler.dart';
 
 /// Manages media tracks and renderers
 class MediaManager {
@@ -58,29 +59,63 @@ class MediaManager {
     bool enableAudio = true,
   }) async {
     try {
-      if (enableVideo) {
-        _localVideoTrack = await LocalVideoTrack.createCameraTrack(
-          const CameraCaptureOptions(cameraPosition: CameraPosition.front),
-        );
-        await _localVideoTrack?.start();
-        _localVideoController.add(_localVideoTrack);
-        log('Local video track initialized');
-      }
-
-      if (enableAudio) {
-        _localAudioTrack = await LocalAudioTrack.create();
-        await _localAudioTrack?.start();
-        log('Local audio track initialized');
-      }
-
+      // Initialize state with request intent
       _mediaState = MediaState(
         isVideoEnabled: enableVideo,
         isAudioEnabled: enableAudio,
         isFrontCamera: true,
         isSpeakerOn: true,
       );
+
+      if (enableVideo) {
+        final hasVideoPerm =
+            await CallPermissionHandler.requestCameraPermission();
+        if (hasVideoPerm) {
+          try {
+            _localVideoTrack = await LocalVideoTrack.createCameraTrack(
+              const CameraCaptureOptions(
+                cameraPosition: CameraPosition.front,
+                // Use h540_169 for better performance/battery on mobile
+                params: VideoParametersPresets.h540_169,
+              ),
+            );
+            await _localVideoTrack?.start();
+            _localVideoController.add(_localVideoTrack);
+            log('Local video track initialized');
+          } catch (e) {
+            log('Failed to create video track: $e');
+            _mediaState = _mediaState.copyWith(isVideoEnabled: false);
+          }
+        } else {
+          log('Camera permission denied');
+          _mediaState = _mediaState.copyWith(isVideoEnabled: false);
+        }
+      }
+
+      if (enableAudio) {
+        final hasAudioPerm =
+            await CallPermissionHandler.requestMicrophonePermission();
+        if (hasAudioPerm) {
+          try {
+            _localAudioTrack = await LocalAudioTrack.create();
+            await _localAudioTrack?.start();
+            log('Local audio track initialized');
+          } catch (e) {
+            log('Failed to create audio track: $e');
+            _mediaState = _mediaState.copyWith(isAudioEnabled: false);
+          }
+        } else {
+          log('Microphone permission denied');
+          _mediaState = _mediaState.copyWith(isAudioEnabled: false);
+        }
+      }
     } catch (e) {
       log('Error initializing local media: $e');
+      // Ensure we don't leave inconsistent state
+      _mediaState = const MediaState(
+        isVideoEnabled: false,
+        isAudioEnabled: false,
+      );
       rethrow;
     }
   }
@@ -94,6 +129,8 @@ class MediaManager {
 
     try {
       if (_localVideoTrack != null) {
+        // TODO: Enable simulcast once correct API parameter is identified in future SDK versions
+        // Currently relying on adaptiveStream in RoomOptions
         await _room!.localParticipant?.publishVideoTrack(_localVideoTrack!);
         log('Published video track');
       }
@@ -208,15 +245,30 @@ class MediaManager {
   /// Dispose all tracks and resources
   Future<void> dispose() async {
     await stopLocalTracks();
-    await _localVideoTrack?.dispose();
-    await _localAudioTrack?.dispose();
+    await stopLocalTracks();
+
+    // Safety check for disposals
+    try {
+      await _localVideoTrack?.dispose();
+    } catch (e) {
+      log('Error disposing video track: $e');
+    }
+
+    try {
+      await _localAudioTrack?.dispose();
+    } catch (e) {
+      log('Error disposing audio track: $e');
+    }
+
     _localVideoTrack = null;
     _localAudioTrack = null;
     _room = null;
 
-    _localVideoController.close();
-    _remoteVideoController.close();
-    _participantsController.close();
+    if (!_localVideoController.isClosed) await _localVideoController.close();
+    if (!_remoteVideoController.isClosed) await _remoteVideoController.close();
+    if (!_participantsController.isClosed) {
+      await _participantsController.close();
+    }
 
     log('MediaManager disposed');
   }

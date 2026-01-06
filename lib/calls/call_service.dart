@@ -4,15 +4,20 @@ import 'package:flutter/widgets.dart';
 import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/calls/constants/call_constants.dart';
+import 'package:my_app/calls/models/call_models.dart';
 import 'package:my_app/calls/services/media_manager.dart';
+import 'package:my_app/calls/services/signaling_service.dart';
 import 'package:my_app/environment.dart';
 
 /// Enhanced service for managing LiveKit room connections and call lifecycle
 class CallService {
   final AppwriteService _appwriteService;
+  final SignalingService _signalingService;
   final MediaManager mediaManager;
 
   lk.Room? _room;
+  String? _currentRoomName;
+  CallData? _activeCall;
   Timer? _reconnectionTimer;
   int _reconnectionAttempts = 0;
   bool _isDisposed = false;
@@ -20,17 +25,138 @@ class CallService {
   final _connectionStateController =
       StreamController<lk.ConnectionState>.broadcast();
   final _errorController = StreamController<String>.broadcast();
+  final _incomingCallController = StreamController<CallData>.broadcast();
 
   Stream<lk.ConnectionState> get connectionStateStream =>
       _connectionStateController.stream;
   Stream<String> get errorStream => _errorController.stream;
+  Stream<CallData> get incomingCallStream => _incomingCallController.stream;
+  CallData? get activeCall => _activeCall;
 
   lk.Room? get room => _room;
   bool get isConnected =>
       _room?.connectionState == lk.ConnectionState.connected;
 
-  CallService(this._appwriteService, {MediaManager? mediaManager})
-    : mediaManager = mediaManager ?? MediaManager();
+  CallService(this._appwriteService, this._signalingService,
+      {MediaManager? mediaManager})
+      : mediaManager = mediaManager ?? MediaManager();
+
+  void _log(String message) {
+    log('[CallService] $message');
+  }
+
+  /// Initialize the service and start listening for signals
+  Future<void> initialize() async {
+    _log('Initializing...');
+    await _signalingService.startListening();
+    _signalingService.callEvents.listen(_handleSignalingEvent);
+
+    // Check for any active call on startup
+    final currentCall = await _signalingService.getActiveCall();
+    if (currentCall != null && currentCall.status == CallState.connecting) {
+      _log('Resuming active call: ${currentCall.callId}');
+      _activeCall = currentCall;
+      connectToRoom(currentCall.roomName);
+    }
+  }
+
+  /// Handle incoming signaling events
+  void _handleSignalingEvent(CallData event) {
+    _log('Received signal: ${event.status}');
+
+    switch (event.status) {
+      case CallState.initiating:
+        _handleIncomingCall(event);
+        break;
+      case CallState.ended:
+      case CallState.rejected:
+      case CallState.timeout:
+        if (_activeCall?.callId == event.callId) {
+          disconnect();
+          _activeCall = null;
+        }
+        break;
+      default:
+        // Other states handled locally or irrelevant
+        break;
+    }
+  }
+
+  void _handleIncomingCall(CallData call) {
+    if (_room != null) {
+      // Busy: Auto-reject or notify
+      // For now, auto-reject if we are already in a call
+      _signalingService.rejectCall(call.callId);
+      return;
+    }
+    _incomingCallController.add(call);
+  }
+
+  /// Initiate a new call
+  Future<void> makeCall({
+    required String receiverId,
+    required String receiverName,
+    String? receiverAvatar,
+    bool isVideo = true,
+  }) async {
+    try {
+      final callData = await _signalingService.createCall(
+        receiverId: receiverId,
+        receiverName: receiverName,
+        receiverAvatar: receiverAvatar,
+        callType: isVideo ? CallType.video : CallType.audio,
+      );
+
+      _activeCall = callData;
+      await connectToRoom(callData.roomName);
+    } catch (e) {
+      _log('Error making call: $e');
+      _errorController.add('Failed to start call');
+      rethrow;
+    }
+  }
+
+  /// Accept an incoming call
+  Future<void> acceptIncomingCall(CallData call) async {
+    try {
+      await _signalingService.acceptCall(call.callId);
+      _activeCall = call;
+      await connectToRoom(call.roomName);
+    } catch (e) {
+      _log('Error accepting call: $e');
+      _errorController.add('Failed to accept call');
+      _activeCall = null;
+      rethrow;
+    }
+  }
+
+  /// Reject an incoming call
+  Future<void> rejectIncomingCall(String callId) async {
+    try {
+      await _signalingService.rejectCall(callId);
+    } catch (e) {
+      _log('Error rejecting call: $e');
+    }
+  }
+
+  /// End the current active call
+  Future<void> endCurrentCall() async {
+    if (_activeCall == null) return;
+
+    try {
+      await _signalingService.endCall(
+        _activeCall!.callId,
+        acceptedAt: _activeCall!.acceptedAt,
+      );
+      await disconnect();
+      _activeCall = null;
+    } catch (e) {
+      _log('Error ending call: $e');
+      // Force local disconnect even if signaling fails
+      await disconnect();
+      _activeCall = null;
+    }
+  }
 
   /// Connect to a LiveKit room
   Future<lk.Room> connectToRoom(String roomName) async {
@@ -39,49 +165,53 @@ class CallService {
     }
 
     try {
-      log('Connecting to room: $roomName');
+      _log('Connecting to room: $roomName');
+      _currentRoomName = roomName;
 
-      // Create room with optimized settings
-      _room = lk.Room(
-        roomOptions: const lk.RoomOptions(
-          adaptiveStream: true,
-          dynacast: true,
-          defaultAudioPublishOptions: lk.AudioPublishOptions(
-            name: 'microphone',
-            audioBitrate: CallConstants.defaultAudioBitrate,
-          ),
-          defaultVideoPublishOptions: lk.VideoPublishOptions(
-            name: 'camera',
-            videoEncoding: lk.VideoEncoding(
-              maxBitrate: CallConstants.defaultVideoBitrate,
-              maxFramerate: 30,
-            ),
+      // 1. Prepare Room Options
+      final roomOptions = const lk.RoomOptions(
+        adaptiveStream: true,
+        dynacast: true,
+        defaultAudioPublishOptions: lk.AudioPublishOptions(
+          name: 'microphone',
+          audioBitrate: CallConstants.defaultAudioBitrate,
+        ),
+        defaultVideoPublishOptions: lk.VideoPublishOptions(
+          name: 'camera',
+          videoEncoding: lk.VideoEncoding(
+            maxBitrate: CallConstants.defaultVideoBitrate,
+            maxFramerate: 24, // Reduced from 30 for stability
           ),
         ),
       );
 
-      // Setup connection state listener
+      _room = lk.Room(roomOptions: roomOptions);
       _room!.addListener(_onRoomStateChanged);
 
-      // Get LiveKit token
-      final token = await _appwriteService.getLiveKitToken(roomName: roomName);
+      // 2. Parallel Execution: Fetch Token AND Initialize Local Media
+      final results = await Future.wait([
+        _appwriteService.getLiveKitToken(roomName: roomName),
+        mediaManager.initializeLocalMedia(), // Pre-warm camera
+      ]);
 
-      // Connect to room (roomOptions moved to constructor as per deprecation)
-      await _room!.connect(Environment.liveKitUrl, token);
+      final token = results[0] as String;
+      // results[1] is void, media is initialized
 
-      log('Connected to room: $roomName');
-
-      // Set room in media manager
+      // 3. Set Room & Publish Tracks (in parallel with connection if possible, but safer sequential here)
       mediaManager.setRoom(_room!);
 
-      // Initialize and publish local media
-      await mediaManager.initializeLocalMedia();
+      // Connect to LiveKit
+      await _room!.connect(Environment.liveKitUrl, token);
+
+      _log('Connected to LiveKit room');
+
+      // Publish pre-warmed tracks
       await mediaManager.publishLocalTracks();
 
       _reconnectionAttempts = 0;
       return _room!;
     } catch (e) {
-      log('Error connecting to room: $e');
+      _log('Error connecting to room: $e');
       _errorController.add('Failed to connect: $e');
       rethrow;
     }
@@ -93,20 +223,17 @@ class CallService {
 
     final state = _room!.connectionState;
     _connectionStateController.add(state);
-    log('Room connection state changed: $state');
+    _log('Room state changed: $state');
 
     switch (state) {
       case lk.ConnectionState.connecting:
-        log('Room is connecting...');
         break;
       case lk.ConnectionState.disconnected:
         _handleDisconnection();
         break;
       case lk.ConnectionState.reconnecting:
-        log('Room is reconnecting...');
         break;
       case lk.ConnectionState.connected:
-        log('Room connected successfully');
         _reconnectionAttempts = 0;
         _reconnectionTimer?.cancel();
         break;
@@ -119,22 +246,31 @@ class CallService {
 
     if (_reconnectionAttempts < CallConstants.maxReconnectionAttempts) {
       _reconnectionAttempts++;
-      final delay =
-          CallConstants.reconnectionDelay *
+      final delay = CallConstants.reconnectionDelay *
           CallConstants.reconnectionDelayMultiplier *
           _reconnectionAttempts;
 
-      log(
-        'Attempting reconnection $_reconnectionAttempts in ${delay.inSeconds}s',
-      );
+      _log(
+          'Attempting reconnection $_reconnectionAttempts in ${delay.inSeconds}s');
 
       _reconnectionTimer?.cancel();
-      _reconnectionTimer = Timer(delay, () {
-        // LiveKit SDK handles reconnection automatically
-        log('Reconnection attempt $_reconnectionAttempts');
+      _reconnectionTimer = Timer(delay, () async {
+        _log('Triggering reconnection attempt $_reconnectionAttempts');
+
+        // If SDK hasn't reconnected by now, try manual reconnection
+        if (_room?.connectionState != lk.ConnectionState.connected &&
+            _currentRoomName != null) {
+          try {
+            await disconnect();
+            await connectToRoom(_currentRoomName!);
+          } catch (e) {
+            _log('Manual reconnection failed: $e');
+            // Allow timer to trigger next attempt if attempts < max
+          }
+        }
       });
     } else {
-      log('Max reconnection attempts reached');
+      _log('Max reconnection attempts reached');
       _errorController.add('Connection lost. Please try again.');
     }
   }
@@ -142,7 +278,7 @@ class CallService {
   /// Disconnect from the room
   Future<void> disconnect() async {
     try {
-      log('Disconnecting from room');
+      _log('Disconnecting from room');
       _reconnectionTimer?.cancel();
 
       await mediaManager.stopLocalTracks();
@@ -150,10 +286,11 @@ class CallService {
       _room?.removeListener(_onRoomStateChanged);
       _room?.dispose();
       _room = null;
+      _currentRoomName = null;
 
-      log('Disconnected successfully');
+      _log('Disconnected successfully');
     } catch (e) {
-      log('Error disconnecting: $e');
+      _log('Error disconnecting: $e');
     }
   }
 
@@ -161,21 +298,18 @@ class CallService {
   Future<void> handleAppLifecycleChange(AppLifecycleState state) async {
     switch (state) {
       case AppLifecycleState.paused:
-        log('App paused - keeping audio, pausing video');
+        _log('App paused - pausing video');
         if (mediaManager.mediaState.isVideoEnabled) {
           await mediaManager.toggleVideo();
         }
         break;
       case AppLifecycleState.resumed:
-        log('App resumed - resuming video');
+        _log('App resumed - resuming video');
         if (!mediaManager.mediaState.isVideoEnabled) {
           await mediaManager.toggleVideo();
         }
         break;
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.detached:
-      case AppLifecycleState.hidden:
-        // Do nothing for these states
+      default:
         break;
     }
   }
@@ -185,13 +319,15 @@ class CallService {
     if (_isDisposed) return;
 
     _isDisposed = true;
-    log('Disposing CallService');
+    _log('Disposing service');
 
     await disconnect();
     await mediaManager.dispose();
 
     _connectionStateController.close();
     _errorController.close();
+    _incomingCallController.close();
     _reconnectionTimer?.cancel();
+    _signalingService.dispose();
   }
 }

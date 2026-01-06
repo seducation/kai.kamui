@@ -24,9 +24,13 @@ class HmvFeatureTabScreen extends StatefulWidget {
   State<HmvFeatureTabScreen> createState() => _HmvFeatureTabScreenState();
 }
 
-class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
+class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen>
+    with AutomaticKeepAliveClientMixin {
   late FeedController _controller;
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -62,6 +66,7 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return ChangeNotifierProvider.value(
       value: _controller,
       child: Scaffold(
@@ -130,8 +135,7 @@ class _HmvFeatureTabScreenState extends State<HmvFeatureTabScreen> {
               onRefresh: () => controller.refresh(),
               child: ListView.builder(
                 controller: _scrollController,
-                itemCount:
-                    controller.feedItems.length +
+                itemCount: controller.feedItems.length +
                     (controller.isLoading ? 1 : 0),
                 itemBuilder: (context, index) {
                   // Loading indicator at bottom

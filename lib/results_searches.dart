@@ -134,7 +134,10 @@ class _ResultsSearchesState extends State<ResultsSearches>
       return TabBarView(
         controller: _mainTabController,
         children: [
-          const SrvAimodeTabscreen(),
+          SrvAimodeTabscreen(
+            searchResults: _searchResults,
+            query: widget.query,
+          ),
           SrvFeatureTabscreen(searchResults: _searchResults),
           const SrvAppTabscreen(),
           const SrvFilesTabscreen(),

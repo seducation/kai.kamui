@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:my_app/appwrite_service.dart';
 import 'package:my_app/calls/call_service.dart';
 import 'package:provider/provider.dart';
 
@@ -20,7 +19,7 @@ class _AnsweringScreenState extends State<AnsweringScreen> {
   @override
   void initState() {
     super.initState();
-    _callService = CallService(context.read<AppwriteService>());
+    _callService = context.read<CallService>();
     _connectToRoom();
   }
 

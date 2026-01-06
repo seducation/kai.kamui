@@ -141,13 +141,19 @@ class ShortsPage extends StatefulWidget {
   State<ShortsPage> createState() => _ShortsPageState();
 }
 
-class _ShortsPageState extends State<ShortsPage> {
+class _ShortsPageState extends State<ShortsPage>
+    with AutomaticKeepAliveClientMixin {
   late bool _isLiked;
   late int _likeCount;
   int _commentCount = 0;
   late AppwriteService _appwriteService;
   SharedPreferences? _prefs;
   VideoPlayerController? _controller;
+  bool _isInitialized = false;
+  bool _hasError = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -157,17 +163,33 @@ class _ShortsPageState extends State<ShortsPage> {
     _likeCount = widget.post.stats.likes;
     _commentCount = widget.post.stats.comments;
     _initializeState();
+    _initializeVideo();
+  }
 
+  void _initializeVideo() {
     if (widget.post.mediaUrls != null && widget.post.mediaUrls!.isNotEmpty) {
       _controller = VideoPlayerController.networkUrl(
         Uri.parse(widget.post.mediaUrls!.first),
       )..initialize().then((_) {
           if (mounted) {
-            setState(() {});
-            _controller?.play();
-            _controller?.setLooping(true);
+            setState(() {
+              _isInitialized = true;
+              _controller?.play();
+              _controller?.setLooping(true);
+            });
           }
+        }).catchError((error) {
+          if (mounted) {
+            setState(() {
+              _hasError = true;
+            });
+          }
+          debugPrint("Video initialization error: $error");
         });
+    } else {
+      setState(() {
+        _hasError = true;
+      });
     }
   }
 
@@ -253,10 +275,12 @@ class _ShortsPageState extends State<ShortsPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
+      backgroundColor: Colors.black,
       body: GestureDetector(
         onTap: () {
-          if (_controller != null) {
+          if (_controller != null && _isInitialized && !_hasError) {
             setState(() {
               if (_controller!.value.isPlaying) {
                 _controller!.pause();
@@ -270,27 +294,46 @@ class _ShortsPageState extends State<ShortsPage> {
           fit: StackFit.expand,
           children: [
             // Video player
-            _controller != null && _controller!.value.isInitialized
-                ? AspectRatio(
-                    aspectRatio: _controller!.value.aspectRatio,
+            if (_isInitialized && _controller != null && !_hasError)
+              SizedBox.expand(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: _controller!.value.size.width,
+                    height: _controller!.value.size.height,
                     child: VideoPlayer(_controller!),
-                  )
-                : Container(
-                    color: Colors.black,
-                    child: const Center(child: CircularProgressIndicator()),
                   ),
+                ),
+              )
+            else if (_hasError)
+              const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.white, size: 48),
+                    SizedBox(height: 8),
+                    Text(
+                      "Video failed to load",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+              )
+            else
+              const Center(child: CircularProgressIndicator()),
+
             // Gradient overlay for text readability
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    const Color.fromARGB(153, 0, 0, 0),
+                    const Color.fromARGB(100, 0, 0, 0),
                     Colors.transparent,
-                    const Color.fromARGB(153, 0, 0, 0),
+                    const Color.fromARGB(150, 0, 0, 0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  stops: const [0.0, 0.5, 1.0],
+                  stops: const [0.0, 0.4, 1.0],
                 ),
               ),
             ),

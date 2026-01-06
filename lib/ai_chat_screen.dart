@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
 class AIChatScreen extends StatefulWidget {
-  const AIChatScreen({super.key});
+  final List<Map<String, dynamic>> searchResults;
+  final String query;
+
+  const AIChatScreen({
+    super.key,
+    required this.searchResults,
+    required this.query,
+  });
 
   @override
   State<AIChatScreen> createState() => _AIChatScreenState();
@@ -10,6 +17,32 @@ class AIChatScreen extends StatefulWidget {
 class _AIChatScreenState extends State<AIChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, String>> _messages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _generateInitialAIOverview();
+  }
+
+  void _generateInitialAIOverview() {
+    final posts = widget.searchResults.where((r) => r['type'] == 'post').length;
+    final profiles =
+        widget.searchResults.where((r) => r['type'] == 'profile').length;
+
+    String summary =
+        "Search results for \"${widget.query}\" found $posts posts and $profiles profiles. ";
+    if (posts > 0 || profiles > 0) {
+      summary +=
+          "Based on these results, you might find interesting content from ${profiles > 0 ? 'top profiles' : ''}${profiles > 0 && posts > 0 ? ' and ' : ''}${posts > 0 ? 'recent posts' : ''}.";
+    } else {
+      summary += "No specific results were found for this query.";
+    }
+
+    _messages.add({
+      'sender': 'ai',
+      'text': summary,
+    });
+  }
 
   void _sendMessage(String text) {
     if (text.trim().isEmpty) return;
@@ -36,7 +69,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
               final isUserMessage = message['sender'] == 'user';
 
               return Align(
-                alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
+                alignment: isUserMessage
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 4.0),
                   padding: const EdgeInsets.all(12.0),
