@@ -60,20 +60,24 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
 - **Immune System**: Scans for "pathogens" (failing agents) and tracks system "inflammation" (error spikes). Triggers **Fever Mode** (Safe Mode) to prevent data loss when error rates are high.
 - **Reflex System**: Acts as the spinal cord, intercepting dangerous commands (e.g., `rm -rf`, `sudo`) *before* they reach the Planner, providing instant safety.
 
-- [x] **Immune System**: Active defense against "pathogens" (errors) and system "inflammation" (Safe Mode).
-- [x] **Reflex System**: Spinal Cord interception of dangerous inputs before they reach the Brain.
+### 11. Motor System & Muscles 🦾
+- **Motor System**: Translates abstract intent into external actions via **Actuators**.
+- **Actuators**:
+  - **Appwrite Actuator**: Cloud muscle for serverless deployment/execution.
+  - **Shell Actuator**: Machinary muscle for local command execution and robotics.
+- **Effector Agent**: A specialized heavy-duty execution agent that controls the muscles.
 
 ## 🛠️ Tech Stack & Architecture
 
 - **Framework**: Flutter (Dart)
-- **Architecture**:
-  - **ControllerAgent**: The central nervous system.
-  - **PlannerAgent**: The cognitive frontal lobe for strategic planning.
-  - **ReliabilityTracker**: The performance-based hippocampus (memory).
-  - **AutonomicSystem**: The involuntary nervous system for health maintenance.
-  - **SleepManager**: The circadian management for resource optimization.
-  - **ImmuneSystem**: The lymphatic defense system.
-  - **ReflexSystem**: The spinal cord for instant safety reactions.
+- **Biological Architecture**:
+  - **Brain (Frontal Lobe)**: `PlannerAgent` (Planning & Routing).
+  - **Memory (Hippocampus)**: `ReliabilityTracker` (Learning from success).
+  - **Autonomic Nervous System**: `AutonomicSystem` (Heartbeat & Health).
+  - **Circadian Rhythms**: `SleepManager` (Resource Optimization).
+  - **Immune System**: `ImmuneSystem` (Active defense & Safe mode).
+  - **Spinal Cord (Reflexes)**: `ReflexSystem` (Instant safety).
+  - **Muscles (Motor System)**: `MotorSystem` & `EffectorAgent` (External action).
 
 ## 🚀 Getting Started
 
@@ -81,6 +85,7 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
 2. **Configure Zones**: Set up storage zones in the **Storage Settings**.
 3. **Design your Flow**: Open the **Visual Orchestrator** and connect your agents.
 4. **Monitor Health**: Keep an eye on the **System Health** pulse on the dashboard.
+5. **Actuate**: Use the **Effector Agent** to deploy cloud functions or control hardware.
 
 ## 📝 Planned Improvements
 - [ ] LLM-powered Graph Hallucination.

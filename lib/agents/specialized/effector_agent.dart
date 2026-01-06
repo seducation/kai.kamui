@@ -42,8 +42,6 @@ class EffectorAgent extends AgentBase {
     }
   }
 
-  }
-
   List<AgentCapability> get capabilities => [
         const AgentCapability(
           id: 'cap_actuation',
