@@ -56,18 +56,26 @@ A powerful, visual, and persistent multi-agent orchestration system built with F
   - **Deep Sleep**: Compacts execution history and re-indexes the failure vault.
 - **Instant Wake**: All background processes yield immediately when the user interacts or sends a request.
 
-### 10. Immune & Reflex Systems (Active Robustness) 🛡️⚡
-- **Immune System**: Scans for "pathogens" (failing agents) and tracks system "inflammation" (error spikes). Triggers **Fever Mode** (Safe Mode) to prevent data loss when error rates are high.
-- **Reflex System**: Acts as the spinal cord, intercepting dangerous commands (e.g., `rm -rf`, `sudo`) *before* they reach the Planner, providing instant safety.
+### 10. Priority + Rule Engine (PRE) ⚖️⚡
+- **Rule Engine**: The supreme authority for all agent actions. Enforces deterministic safety rules (blocking `rm -rf`, `sudo`, etc.) before any execution.
+- **Priority Scheduler**: Intelligent task queue with integer-based priorities (`Reflex`, `Critical`, `Emergency`, `High`, `Normal`, `Low`).
+- **Interactive Management**: Dedicated **Rules & Priority Engine UI** to monitor active rules and the prioritized task pipeline.
 
-### 11. Motor System & Muscles 🦾
+### 11. Behavioral Intelligence (JARVIS-Level) 🎭🔮
+- **Persona Gateway**: Enforces a consistent JARVIS-like tone and brevity across all system outputs.
+- **Narrator Agent**: Real-time internal voice providing status updates via Broca's area.
+- **Reactive Preemption**: True task halting using `CancellationToken` for high-priority interrupts.
+- **Psychological Pacing**: Intentional "thinking" delays modulated by task priority for perceived thoughtfulness.
+- **Prediction Engine**: Anticipates user needs by preloading agents based on command history patterns.
+
+### 12. Motor System & Muscles 🦾
 - **Motor System**: Translates abstract intent into external actions via **Actuators**.
 - **Actuators**:
   - **Appwrite Actuator**: Cloud muscle for serverless deployment/execution.
   - **Shell Actuator**: Machinary muscle for local command execution and robotics.
 - **Effector Agent**: A specialized heavy-duty execution agent that controls the muscles.
 
-### 12. Biological Dashboard (Visual Consciousness) 👁️
+### 13. Biological Dashboard (Visual Consciousness) 👁️
 - **Organ Monitor**: Real-time visualization of metabolic states and organ health.
 - **Volition Stream**: A live feed of the AI's "Stream of Consciousness" and internal drives.
 - **Quarantine Zone**: visual management of agents locked by the Reflex System.

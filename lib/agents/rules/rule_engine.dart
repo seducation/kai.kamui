@@ -50,6 +50,9 @@ class RuleEngine {
   bool _initialized = false;
   String? _storagePath;
 
+  /// Get all active rules
+  List<Rule> get rules => List.unmodifiable(_rules);
+
   /// Initialize the engine (load rules)
   Future<void> initialize() async {
     if (_initialized) return;

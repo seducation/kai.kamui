@@ -11,6 +11,7 @@ import 'biological/volition_stream_widget.dart';
 import 'step_stream_widget.dart';
 import 'visual_orchestration_screen.dart';
 import 'api_key_settings_screen.dart';
+import 'rule_priority_screen.dart';
 import 'system_status_row.dart';
 
 /// Dashboard showing all agents and their status.
@@ -150,6 +151,18 @@ class _AgentDashboardState extends State<AgentDashboard> {
               context,
               MaterialPageRoute(
                 builder: (context) => const VisualOrchestrationScreen(),
+              ),
+            );
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.gavel),
+          title: const Text('Rules & Priority Engine'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const RulePriorityScreen(),
               ),
             );
           },

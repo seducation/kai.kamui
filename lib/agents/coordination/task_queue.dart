@@ -121,6 +121,13 @@ class TaskQueue {
   /// Task counter for unique IDs
   int _taskCounter = 0;
 
+  /// Get all tasks in the queue
+  Map<String, QueuedTask> get allTasks => Map.unmodifiable(_tasks);
+
+  /// Get tasks grouped by priority
+  Map<int, List<String>> get priorityBuckets =>
+      _priorityBuckets.map((k, v) => MapEntry(k, v.toList()));
+
   TaskQueue({
     this.maxConcurrent = 4,
     StepLogger? logger,
