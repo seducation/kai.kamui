@@ -13,6 +13,12 @@ enum InteractionStyle {
   didactic, // Explanatory, educational
 }
 
+/// JARVIS Personnel Interface Styles
+enum PersonnelProfile {
+  sir, // Stark style: Polite, slightly witty, proactive
+  operator, // Military style: Direct, formal, zero-chatter
+}
+
 /// User Context 🧑‍💻
 ///
 /// Tracks the current state of the human operator to adapt system behavior.
@@ -23,14 +29,20 @@ class UserContext {
 
   UserMood mood = UserMood.relaxed;
   InteractionStyle style = InteractionStyle.cinematic;
+  PersonnelProfile personnel = PersonnelProfile.sir; // Default to Stark
   String? lastActivity;
   DateTime lastInteraction = DateTime.now();
 
   /// Update context based on observation
-  void update(
-      {UserMood? newMood, InteractionStyle? newStyle, String? activity}) {
+  void update({
+    UserMood? newMood,
+    InteractionStyle? newStyle,
+    PersonnelProfile? newPersonnel,
+    String? activity,
+  }) {
     if (newMood != null) mood = newMood;
     if (newStyle != null) style = newStyle;
+    if (newPersonnel != null) personnel = newPersonnel;
     if (activity != null) lastActivity = activity;
     lastInteraction = DateTime.now();
   }
@@ -39,6 +51,7 @@ class UserContext {
   void reset() {
     mood = UserMood.relaxed;
     style = InteractionStyle.cinematic;
+    personnel = PersonnelProfile.sir;
   }
 }
 

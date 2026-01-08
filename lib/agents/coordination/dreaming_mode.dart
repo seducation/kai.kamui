@@ -11,6 +11,8 @@ import '../coordination/agent_registry.dart';
 import '../specialized/systems/user_context.dart';
 import '../specialized/systems/dream_vault.dart';
 
+import '../services/proactive_alert/affect_engine.dart';
+
 /// Dream Type - What kind of dream is this?
 enum DreamType {
   /// Tactical: Re-simulate failed tasks to find better parameters
@@ -273,12 +275,14 @@ class DreamingMode {
   }
 
   Future<void> _runMemoryConsolidation(DreamReport report) async {
-    // Placeholder - will be implemented in memory_consolidation.dart
-    // For now, add a basic observation
+    // 1. Affective Consolidation: Smooth out stress/urgency over time
+    AffectEngine().consolidateDreams();
+
+    // 2. Memory Scan
     report.observations.add(DreamObservation(
       id: const Uuid().v4(),
       category: 'memory',
-      description: 'Memory consolidation scan completed',
+      description: 'Memory & Affective consolidation scan completed',
       confidence: 1.0,
     ));
   }

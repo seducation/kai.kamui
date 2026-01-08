@@ -5,6 +5,7 @@ import '../specialized/systems/tone_modulator.dart';
 import '../specialized/systems/user_context.dart';
 import '../rules/rule_definitions.dart';
 import 'speech_gate.dart';
+import 'personnel_formatter.dart';
 
 /// Converts step logs to human-readable text.
 /// The narrator ONLY rephrases logged actions - it NEVER invents steps.
@@ -48,11 +49,20 @@ class NarratorService {
     final allowed = SpeechGate().evaluateIntent(intent, priority: priority);
 
     if (allowed) {
-      // In a real implementation, this would call a TTS service
-      // or emit an event that the UI catches to play audio.
-      debugPrint('🔊 SPEECH: $message');
-    } else {
-      // print('🔇 SPEECH BLOCKED: $message');
+      // 1. Determine Tone based on priority
+      final tone = ToneModulator().determineTone(
+        priorityLevel: priority,
+        reliabilityScore: 1.0,
+        isDreaming: false,
+      );
+
+      // 2. Apply Personnel Style (Sir vs Operator)
+      final styledMessage = PersonnelFormatter().format(message, tone);
+
+      // 3. Modulate prefix icons
+      final finalSpeech = ToneModulator().modulate(styledMessage, tone);
+
+      debugPrint('🔊 SPEECH: $finalSpeech');
     }
   }
 

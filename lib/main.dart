@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 
 // Agent system imports
 import 'agents/agents.dart';
+import 'agents/services/proactive_alert/proactive_alert_engine.dart';
+import 'agents/services/proactive_alert/swarm_engine.dart';
+import 'agents/specialized/systems/thermal_controller.dart';
+import 'agents/specialized/systems/robot_machine.dart';
+import 'agents/specialized/systems/phone_machine.dart';
 
 void main() {
   runApp(const MyApp());
@@ -64,6 +69,16 @@ class _AgentDemoScreenState extends State<AgentDemoScreen> {
     _registry.register(StorageAgent(logger: _logger));
     _registry.register(SystemAgent(logger: _logger));
     _registry.register(AppwriteFunctionAgent(logger: _logger));
+    _registry.register(OrganAgent(logger: _logger));
+
+    // Initialize Stark-mode Machinery
+    final pae = ProactiveAlertEngine();
+    pae.registerMachine(ThermalController());
+    pae.registerMachine(RobotMachine());
+    pae.registerMachine(PhoneMachine());
+
+    // Kick off Swarm Affect Propagation
+    SwarmEngine();
 
     // Create controller
     _controller = ControllerAgent(

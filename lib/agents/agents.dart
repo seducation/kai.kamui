@@ -31,6 +31,7 @@ export 'storage/storage.dart';
 // Services
 export 'services/narrator_service.dart';
 export 'services/api_key_manager.dart';
+export 'services/proactive_alert/machine_abstraction.dart';
 
 // UI components
 export 'ui/ui.dart';

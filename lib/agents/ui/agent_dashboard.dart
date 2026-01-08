@@ -19,6 +19,9 @@ import 'mission_monitor_screen.dart';
 import 'trust_center_screen.dart';
 import 'world_monitor_screen.dart'; // [NEW] Layer 5
 import 'explainability_screen.dart'; // [NEW] Layer 6
+import 'machine_control_screen.dart'; // [NEW] Stark Machine Control
+
+import 'imotion_screen.dart'; // [NEW] Phase 12
 
 /// Dashboard showing all agents and their status.
 /// Provides overview of the multi-agent system.
@@ -245,6 +248,33 @@ class _AgentDashboardState extends State<AgentDashboard> {
               context,
               MaterialPageRoute(
                 builder: (context) => const RulePriorityScreen(),
+              ),
+            );
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.analytics, color: Colors.blue),
+          title: const Text('IMOTION HUD'),
+          subtitle: const Text('Swarm Affect & Coordination'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ImotionScreen(),
+              ),
+            );
+          },
+        ),
+        ListTile(
+          leading:
+              const Icon(Icons.settings_input_component, color: Colors.teal),
+          title: const Text('Machine Control & Connectors'),
+          subtitle: const Text('Direct Actuation & Telemetry'),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MachineControlScreen(),
               ),
             );
           },
