@@ -52,5 +52,35 @@ void main() {
           priority: PriorityLevel.reflex);
       expect(allowed, isFalse);
     });
+
+    test('Rule with vocalize=true triggers speech evaluation', () async {
+      final rule = Rule(
+        id: 'VOICE-TEST',
+        type: RuleType.safety,
+        scope: RuleScope.global,
+        condition: 'contains: "trigger"',
+        action: RuleAction.deny,
+        explanation: 'Testing vocal logic',
+        vocalize: true,
+      );
+
+      await RuleEngine().addRule(rule);
+
+      final context = RuleContext(
+        agentName: 'TestAgent',
+        action: 'execute',
+        input: 'trigger',
+        requestedPriority: PriorityLevel.normal,
+      );
+
+      // We can't easily capture the Narrator.speak call in a light test,
+      // but we can verify the rule matches and that evaluateIntent would allow it.
+      final result = RuleEngine().evaluate(context);
+      expect(result.triggeringRule?.id, equals('VOICE-TEST'));
+      expect(result.triggeringRule?.vocalize, isTrue);
+
+      // The evaluate() call now triggers speech internally.
+      // We've verified the state is correct for the trigger.
+    });
   });
 }

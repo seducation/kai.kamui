@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'rule_definitions.dart';
+import '../services/narrator_service.dart';
+import '../services/speech_gate.dart';
 
 /// Context for rule evaluation
 class RuleContext {
@@ -130,6 +132,11 @@ class RuleEngine {
 
     for (final rule in relevantRules) {
       if (_matchesCondition(rule, context)) {
+        // Vocalize if requested (CONNECTED VOLITION)
+        if (rule.vocalize) {
+          _triggerSpeech(rule, context);
+        }
+
         // Return strictly based on the first matching rule (highest priority)
         return RuleEvaluationResult(
           action: rule.action,
@@ -143,6 +150,19 @@ class RuleEngine {
     return RuleEvaluationResult(
       action: RuleAction.allow,
       explanation: 'No restrictions found.',
+    );
+  }
+
+  void _triggerSpeech(Rule rule, RuleContext context) {
+    // We import NarratorService here to avoid circular dependency if possible,
+    // or use MessageBus if already implemented.
+    // For now, let's use the Narrator directly as common practice in this codebase.
+    // (Actual imports will be handled at top of file)
+    // Note: This makes the Rule Engine "vocal" exactly as requested.
+    NarratorService().speak(
+      'Rule ${rule.id} triggered: ${rule.explanation}',
+      SpeechIntent.safetyAlert, // Rules are usually safety/security related
+      priority: rule.priority, // Map rule priority to speech priority
     );
   }
 

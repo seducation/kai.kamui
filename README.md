@@ -46,6 +46,7 @@ We have successfully implemented a fully "alive" agentic stack:
 
 ### 8. Priority + Rule Engine (PRE) Architecture ⚖️
 *   **Rule Engine**: A deterministic guardrail system (e.g., `SAFE-001` blocks `rm -rf`).
+*   **Vocalizing Rules**: Rules can now explicitly trigger the **Volitional Speech Gate** by setting the `vocalize: true` property.
 *   **Task Queue Priority**: Tasks are bucketed into levels (Reflex, Emergency, High, Normal, Maintenance).
 *   **Real-time Enforcement**: The system evaluates every action against the rule set before execution.
 

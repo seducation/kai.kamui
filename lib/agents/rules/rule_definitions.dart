@@ -153,6 +153,7 @@ class Rule {
   final bool immutable; // Can be modified by SystemAgent?
   final AuthorityLevel
       authority; // NEW: Authority level for conflict resolution
+  final bool vocalize; // NEW: If true, triggers volition speech on match
 
   const Rule({
     required this.id,
@@ -165,6 +166,7 @@ class Rule {
     required this.explanation,
     this.immutable = false,
     this.authority = AuthorityLevel.systemRule, // Default to system rule
+    this.vocalize = false, // Default to silent
   });
 
   Map<String, dynamic> toJson() => {
@@ -178,6 +180,7 @@ class Rule {
         'explanation': explanation,
         'immutable': immutable,
         'authority': authority.index,
+        'vocalize': vocalize,
       };
 
   factory Rule.fromJson(Map<String, dynamic> json) {
@@ -194,6 +197,7 @@ class Rule {
       authority: json['authority'] != null
           ? AuthorityLevel.values[json['authority']]
           : AuthorityLevel.systemRule,
+      vocalize: json['vocalize'] ?? false,
     );
   }
 }
