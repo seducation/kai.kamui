@@ -16,7 +16,6 @@ import 'api_key_settings_screen.dart';
 import 'rule_priority_screen.dart';
 import 'system_status_row.dart';
 import 'mission_monitor_screen.dart';
-import 'mission_monitor_screen.dart';
 import 'trust_center_screen.dart';
 import 'world_monitor_screen.dart'; // [NEW] Layer 5
 import 'explainability_screen.dart'; // [NEW] Layer 6
@@ -173,6 +172,7 @@ class _AgentDashboardState extends State<AgentDashboard> {
               ),
             );
           },
+        ),
         ListTile(
           leading: const Icon(Icons.public, color: Colors.blueGrey),
           title: const Text('World Monitor (Sensory)'),

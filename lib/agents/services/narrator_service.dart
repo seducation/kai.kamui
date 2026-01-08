@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../core/step_schema.dart';
 import '../core/step_types.dart';
 import '../specialized/systems/tone_modulator.dart';
@@ -49,7 +50,7 @@ class NarratorService {
     if (allowed) {
       // In a real implementation, this would call a TTS service
       // or emit an event that the UI catches to play audio.
-      print('🔊 SPEECH: $message');
+      debugPrint('🔊 SPEECH: $message');
     } else {
       // print('🔇 SPEECH BLOCKED: $message');
     }

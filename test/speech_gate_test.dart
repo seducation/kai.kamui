@@ -1,7 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_app/agents/services/speech_gate.dart';
-import 'package:my_app/agents/services/narrator_service.dart';
-import 'package:my_app/agents/permissions/access_gate.dart';
 import 'package:my_app/agents/rules/rule_definitions.dart';
 import 'package:my_app/agents/rules/rule_engine.dart';
 
@@ -10,11 +8,9 @@ void main() {
 
   group('Volitional Speech Gate Tests', () {
     late SpeechGate gate;
-    late NarratorService narrator;
 
     setUp(() {
       gate = SpeechGate();
-      narrator = NarratorService();
       gate.setMissionMode(false);
       RuleEngine().setProfile(ComplianceProfile.personal);
     });
